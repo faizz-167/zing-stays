@@ -9,6 +9,7 @@ import {
   pgEnum,
   jsonb,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 export const roomTypeEnum = pgEnum('room_type', ['single', 'double', 'shared']);
@@ -30,7 +31,10 @@ export const otpSessions = pgTable('otp_sessions', {
   code: varchar('code', { length: 6 }).notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  index('otp_phone_idx').on(table.phone),
+  index('otp_expires_idx').on(table.expiresAt),
+]);
 
 export const listings = pgTable('listings', {
   id: serial('id').primaryKey(),
@@ -57,6 +61,7 @@ export const listings = pgTable('listings', {
   index('listings_city_idx').on(table.city),
   index('listings_owner_idx').on(table.ownerId),
   index('listings_status_idx').on(table.status),
+  index('listings_city_status_idx').on(table.city, table.status),
 ]);
 
 export const favorites = pgTable('favorites', {
@@ -64,14 +69,18 @@ export const favorites = pgTable('favorites', {
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   listingId: integer('listing_id').references(() => listings.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex('favorites_user_listing_uniq').on(table.userId, table.listingId),
+]);
 
 export const contactLeads = pgTable('contact_leads', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   listingId: integer('listing_id').references(() => listings.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex('contact_leads_user_listing_uniq').on(table.userId, table.listingId),
+]);
 
 // TypeScript types
 export type User = typeof users.$inferSelect;
@@ -79,3 +88,6 @@ export type NewUser = typeof users.$inferInsert;
 export type Listing = typeof listings.$inferSelect;
 export type NewListing = typeof listings.$inferInsert;
 export type Favorite = typeof favorites.$inferSelect;
+export type ContactLead = typeof contactLeads.$inferSelect;
+export type NewContactLead = typeof contactLeads.$inferInsert;
+export type NewFavorite = typeof favorites.$inferInsert;
