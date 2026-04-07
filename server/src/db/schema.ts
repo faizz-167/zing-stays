@@ -30,6 +30,7 @@ export const otpSessions = pgTable('otp_sessions', {
   phone: varchar('phone', { length: 20 }).notNull(),
   code: varchar('code', { length: 6 }).notNull(),
   expiresAt: timestamp('expires_at').notNull(),
+  attempts: integer('attempts').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('otp_phone_idx').on(table.phone),
