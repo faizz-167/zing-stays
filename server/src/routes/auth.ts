@@ -14,7 +14,7 @@ const phoneSchema = z.object({
 });
 
 const verifySchema = z.object({
-  phone: z.string(),
+  phone: z.string().regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number'),
   code: z.string().length(6),
 });
 
