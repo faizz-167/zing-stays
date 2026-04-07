@@ -43,32 +43,42 @@ router.post('/verify-otp', async (req, res) => {
   }
 
   const { phone, code } = result.data;
-  const valid = await verifyOtp(phone, code);
-  if (!valid) {
-    res.status(401).json({ error: 'Invalid or expired OTP' });
-    return;
+  try {
+    const valid = await verifyOtp(phone, code);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid or expired OTP' });
+      return;
+    }
+
+    // Upsert user
+    let [user] = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+    if (!user) {
+      [user] = await db.insert(users).values({ phone }).returning();
+    }
+
+    const token = signToken({
+      userId: user.id,
+      phone: user.phone,
+      isAdmin: user.isAdmin,
+    });
+
+    res.json({ token, user: { id: user.id, phone: user.phone, name: user.name } });
+  } catch (err) {
+    console.error('verify-otp error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  // Upsert user
-  let [user] = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
-  if (!user) {
-    [user] = await db.insert(users).values({ phone }).returning();
-  }
-
-  const token = signToken({
-    userId: user.id,
-    phone: user.phone,
-    isAdmin: user.isAdmin,
-  });
-
-  res.json({ token, user: { id: user.id, phone: user.phone, name: user.name } });
 });
 
 // GET /api/auth/me
 router.get('/me', requireAuth, async (req: AuthRequest, res) => {
-  const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
-  if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-  res.json({ user: { id: user.id, phone: user.phone, name: user.name } });
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    res.json({ user: { id: user.id, phone: user.phone, name: user.name } });
+  } catch (err) {
+    console.error('me error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // PATCH /api/auth/profile
@@ -77,12 +87,21 @@ router.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
   if (!name || typeof name !== 'string') {
     res.status(400).json({ error: 'Name required' }); return;
   }
-  const [updated] = await db
-    .update(users)
-    .set({ name: name.trim() })
-    .where(eq(users.id, req.user!.userId))
-    .returning();
-  res.json({ user: { id: updated.id, phone: updated.phone, name: updated.name } });
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length > 100) {
+    res.status(400).json({ error: 'Name must be 1–100 characters' }); return;
+  }
+  try {
+    const [updated] = await db
+      .update(users)
+      .set({ name: trimmed })
+      .where(eq(users.id, req.user!.userId))
+      .returning();
+    res.json({ user: { id: updated.id, phone: updated.phone, name: updated.name } });
+  } catch (err) {
+    console.error('profile update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;
