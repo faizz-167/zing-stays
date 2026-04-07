@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import { setupSearchIndex } from './services/search';
 import authRoutes from './routes/auth';
 import listingRoutes from './routes/listings';
 import searchRoutes from './routes/search';
@@ -35,6 +36,8 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
+
+setupSearchIndex().catch(console.error);
 
 const server = app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)
