@@ -1,65 +1,98 @@
-import Image from "next/image";
+import Link from 'next/link';
+import SearchBar from '@/components/search/SearchBar';
+import SectionLabel from '@/components/ui/SectionLabel';
+import Button from '@/components/ui/Button';
 
-export default function Home() {
+const AMENITIES = ['WiFi Included', 'Meals Provided', 'AC Room', 'Attached Bath', 'Laundry', 'CCTV Security'];
+const HOW_IT_WORKS = [
+  { step: '01', title: 'Search Your City', desc: 'Enter your city, locality, or nearby landmark to find available rooms instantly.' },
+  { step: '02', title: 'Browse & Filter', desc: 'Filter by price, room type, amenities, and gender preference to narrow your choices.' },
+  { step: '03', title: 'Contact Owner', desc: 'Verify your phone number once and get direct access to owner contact details.' },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <>
+      {/* Hero */}
+      <section className="relative py-32 md:py-44 px-6 overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-[600px] h-[600px] rounded-full bg-accent opacity-[0.02] blur-3xl" />
+        </div>
+
+        <div className="max-w-content mx-auto text-center relative">
+          <div className="mb-8">
+            <span className="font-mono text-xs font-medium uppercase tracking-[0.15em] text-accent">
+              Student &amp; Bachelor Housing
+            </span>
+          </div>
+          <h1 className="font-display text-[2.5rem] md:text-[4.5rem] leading-[1.1] tracking-[-0.02em] text-foreground mb-6">
+            Find Your Perfect<br />
+            <span className="text-accent">Room in India</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="font-sans text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
+            Verified PGs, hostels, and shared accommodations with transparent pricing and direct owner contact.
           </p>
+          <div className="flex justify-center mb-8">
+            <SearchBar />
+          </div>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            <span className="font-mono text-xs text-muted-foreground uppercase tracking-[0.1em]">Popular:</span>
+            {['Mumbai', 'Bangalore', 'Delhi', 'Pune', 'Hyderabad'].map(city => (
+              <Link key={city} href={`/listings?city=${city}`} className="font-sans text-sm text-muted-foreground hover:text-accent transition-colors underline-offset-4 hover:underline decoration-accent">
+                {city}
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-32 px-6 border-t border-border">
+        <div className="max-w-content mx-auto">
+          <SectionLabel>How It Works</SectionLabel>
+          <h2 className="font-display text-4xl text-center mb-16">Simple. Fast. Transparent.</h2>
+          <div className="grid md:grid-cols-3 gap-12">
+            {HOW_IT_WORKS.map(({ step, title, desc }) => (
+              <div key={step} className="text-center">
+                <div className="font-display text-5xl text-accent/30 mb-4">{step}</div>
+                <h3 className="font-display text-xl mb-3">{title}</h3>
+                <p className="font-sans text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Amenities */}
+      <section className="py-32 px-6 bg-muted">
+        <div className="max-w-content mx-auto">
+          <SectionLabel>What You Get</SectionLabel>
+          <h2 className="font-display text-4xl text-center mb-16">Everything You Need</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {AMENITIES.map(amenity => (
+              <div key={amenity} className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
+                <span className="font-sans text-sm">{amenity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-32 px-6 border-t border-border text-center">
+        <div className="max-w-content mx-auto">
+          <SectionLabel>For Property Owners</SectionLabel>
+          <h2 className="font-display text-4xl mb-6">List Your Room in Minutes</h2>
+          <p className="font-sans text-lg text-muted-foreground mb-10 max-w-lg mx-auto">
+            Post your PG, hostel, or room for free. Reach thousands of students looking for their next home.
+          </p>
+          <Link href="/dashboard/listings/new">
+            <Button size="lg">Post a Room — It&apos;s Free</Button>
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }
