@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf8;
+  --foreground: #1a1a1a;
+  --muted: #f5f3f0;
+  --muted-foreground: #6b6b6b;
+  --accent: #b8860b;
+  --accent-secondary: #d4a84b;
+  --accent-foreground: #ffffff;
+  --border: #e8e4df;
+  --card: #ffffff;
+  --ring: #b8860b;
+  --input: #e8e4df;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-source-sans), system-ui, sans-serif;
+  --font-mono: var(--font-ibm-mono), monospace;
+
+  --container-content: 64rem;
+  --shadow-sm: 0 1px 2px rgba(26, 26, 26, 0.04);
+  --shadow-md: 0 4px 12px rgba(26, 26, 26, 0.06);
+  --shadow-lg: 0 8px 24px rgba(26, 26, 26, 0.08);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-source-sans), system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-playfair), Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+.small-caps {
+  font-family: var(--font-ibm-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.3;
+}
