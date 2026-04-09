@@ -6,10 +6,19 @@ const router = Router();
 
 const VALID_SORT_FIELDS = ['completeness_score:desc', 'completeness_score:asc', 'price:asc', 'price:desc', 'created_at:desc', 'created_at:asc'];
 
+function escapeFilterValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 const searchQuerySchema = z.object({
   q: z.string().max(200).default(''),
   city: z.string().max(100).optional(),
   locality: z.string().max(100).optional(),
+  cityId: z.coerce.number().int().positive().optional(),
+  localityId: z.coerce.number().int().positive().optional(),
+  city_id: z.coerce.number().int().positive().optional(),
+  locality_id: z.coerce.number().int().positive().optional(),
+  intent: z.enum(['buy', 'rent']).optional(),
   room_type: z.enum(['single', 'double', 'shared']).optional(),
   property_type: z.enum(['pg', 'hostel', 'apartment', 'flat']).optional(),
   food_included: z.enum(['true', 'false']).optional(),
@@ -25,11 +34,30 @@ router.get('/', async (req, res) => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0].message }); return;
   }
-  const { q, city, locality, room_type, property_type, food_included, gender, price_min, price_max, sort } = parsed.data;
+  const {
+    q,
+    city,
+    locality,
+    cityId,
+    localityId,
+    city_id,
+    locality_id,
+    intent,
+    room_type,
+    property_type,
+    food_included,
+    gender,
+    price_min,
+    price_max,
+    sort,
+  } = parsed.data;
 
   const filters: string[] = ['status = "active"'];
-  if (city) filters.push(`city = "${city}"`);
-  if (locality) filters.push(`locality = "${locality}"`);
+  if (city) filters.push(`city = "${escapeFilterValue(city)}"`);
+  if (locality) filters.push(`locality = "${escapeFilterValue(locality)}"`);
+  if (cityId !== undefined || city_id !== undefined) filters.push(`city_id = ${cityId ?? city_id}`);
+  if (localityId !== undefined || locality_id !== undefined) filters.push(`locality_id = ${localityId ?? locality_id}`);
+  if (intent) filters.push(`intent = "${intent}"`);
   if (room_type) filters.push(`room_type = "${room_type}"`);
   if (property_type) filters.push(`property_type = "${property_type}"`);
   if (food_included === 'true') filters.push('food_included = true');

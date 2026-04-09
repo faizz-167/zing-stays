@@ -2,18 +2,17 @@
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import type { OwnerListing } from '@/lib/types';
 import Button from '@/components/ui/Button';
 import SectionLabel from '@/components/ui/SectionLabel';
 import CompletenessBar from '@/components/forms/CompletenessBar';
 
 export default function MyListingsPage() {
-  const { user } = useAuth();
   const qc = useQueryClient();
 
   const { data, isPending } = useQuery({
     queryKey: ['my-listings'],
-    queryFn: () => api.get<{ data: any[] }>('/listings?page=1&limit=50'),
+    queryFn: () => api.get<{ data: OwnerListing[] }>('/listings/mine'),
   });
 
   const deleteMutation = useMutation({
@@ -21,7 +20,7 @@ export default function MyListingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-listings'] }),
   });
 
-  const listings = (data?.data ?? []).filter((l: any) => l.ownerId === user?.id);
+  const listings = data?.data ?? [];
 
   return (
     <div>
@@ -42,7 +41,7 @@ export default function MyListingsPage() {
               <Link href="/dashboard/listings/new"><Button>Post Your First Room</Button></Link>
             </div>
           )}
-          {listings.map((l: any) => (
+          {listings.map((l) => (
             <div key={l.id} className="border border-border rounded-lg p-6 flex flex-col md:flex-row gap-6">
               <div className="flex-1">
                 <h3 className="font-display text-lg mb-1">{l.title}</h3>

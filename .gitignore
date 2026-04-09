@@ -6,3 +6,4 @@ dist/
 drizzle/
 *.tsbuildinfo
 server/drizzle.config.js
+*.agent/

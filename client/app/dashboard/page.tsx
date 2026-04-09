@@ -10,7 +10,7 @@ export default function DashboardPage() {
     <div>
       <SectionLabel>Dashboard</SectionLabel>
       <h1 className="font-display text-3xl mb-2">Welcome, {user?.name || 'there'}</h1>
-      <p className="font-sans text-muted-foreground mb-10">{user?.phone}</p>
+      <p className="font-sans text-muted-foreground mb-10">{user?.email}</p>
       <div className="grid md:grid-cols-2 gap-6">
         <div className="border border-border rounded-xl p-8">
           <h2 className="font-display text-xl mb-2">Your Listings</h2>

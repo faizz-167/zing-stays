@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.delete('/:listingId', requireAuth, async (req: AuthRequest, res) => {
-  const listingId = parseInt(req.params.listingId);
+  const listingId = parseInt(String(req.params.listingId), 10);
   if (isNaN(listingId)) { res.status(400).json({ error: 'Invalid listing ID' }); return; }
   try {
     await db.delete(favorites).where(

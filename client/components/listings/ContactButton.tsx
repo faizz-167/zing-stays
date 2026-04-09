@@ -20,8 +20,8 @@ export default function ContactButton({ listingId }: ContactButtonProps) {
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const revealContact = async () => {
-    if (!isAuthenticated) {
+  const revealContact = async (allowAuthenticatedRequest = isAuthenticated) => {
+    if (!allowAuthenticatedRequest) {
       setShowModal(true);
       return;
     }
@@ -53,7 +53,7 @@ export default function ContactButton({ listingId }: ContactButtonProps) {
 
   return (
     <>
-      <Button size="lg" className="w-full" onClick={revealContact} disabled={loading}>
+      <Button size="lg" className="w-full" onClick={() => void revealContact()} disabled={loading}>
         {loading ? 'Loading...' : 'View Contact Details'}
       </Button>
       <p className="font-sans text-xs text-muted-foreground text-center mt-2">
@@ -65,7 +65,7 @@ export default function ContactButton({ listingId }: ContactButtonProps) {
         <OtpModal
           onSuccess={() => {
             setShowModal(false);
-            revealContact();
+            void revealContact(true);
           }}
           onClose={() => setShowModal(false)}
         />

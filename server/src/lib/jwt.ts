@@ -6,7 +6,7 @@ const jwtSecret: string = JWT_SECRET;
 
 export interface JwtPayload {
   userId: number;
-  phone: string;
+  email: string;
   isAdmin: boolean;
 }
 

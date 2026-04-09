@@ -9,8 +9,8 @@ export const listingsIndex = searchClient.index('listings');
 
 export async function setupSearchIndex(): Promise<void> {
   await listingsIndex.updateFilterableAttributes([
-    'city', 'locality', 'room_type', 'property_type',
-    'food_included', 'gender_pref', 'price', 'status',
+    'city', 'locality', 'city_id', 'locality_id', 'intent',
+    'room_type', 'property_type', 'food_included', 'gender_pref', 'price', 'status',
   ]);
   await listingsIndex.updateSortableAttributes(['price', 'completeness_score', 'created_at']);
   await listingsIndex.updateSearchableAttributes(['title', 'description', 'city', 'locality', 'landmark']);
@@ -19,8 +19,12 @@ export async function setupSearchIndex(): Promise<void> {
 export interface SearchDoc {
   id: number;
   title: string;
+  description?: string;
   city: string;
   locality: string;
+  city_id?: number;
+  locality_id?: number;
+  intent?: string;
   landmark?: string;
   price: number;
   room_type: string;

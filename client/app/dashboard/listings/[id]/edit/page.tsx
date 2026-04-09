@@ -2,6 +2,7 @@
 import { use } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import type { ListingInput } from '@/lib/schemas/listing';
 import SectionLabel from '@/components/ui/SectionLabel';
 import ListingForm from '@/components/forms/ListingForm';
 
@@ -10,7 +11,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
 
   const { data, isPending } = useQuery({
     queryKey: ['listing', id],
-    queryFn: () => api.get<any>(`/listings/${id}`),
+    queryFn: () => api.get<Partial<ListingInput>>(`/listings/${id}`),
   });
 
   if (isPending) return <div className="animate-pulse h-96 bg-muted rounded-lg" />;

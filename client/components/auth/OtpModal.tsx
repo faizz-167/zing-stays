@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { phoneSchema, otpSchema } from '@/lib/schemas/auth';
+import { emailSchema, otpSchema } from '@/lib/schemas/auth';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
@@ -13,8 +13,8 @@ interface OtpModalProps {
 
 export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
   const { login } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,14 +22,14 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = phoneSchema.safeParse({ phone });
+    const result = emailSchema.safeParse({ email });
     if (!result.success) {
       setError(result.error.issues[0].message);
       return;
     }
     setLoading(true);
     try {
-      await api.post('/auth/send-otp', { phone });
+      await api.post('/auth/send-otp', { email: result.data.email });
       setStep('otp');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP');
@@ -48,11 +48,11 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
     }
     setLoading(true);
     try {
-      const res = await api.post<{ token: string; user: Parameters<typeof login>[1] }>(
+      const res = await api.post<{ user: Parameters<typeof login>[0] }>(
         '/auth/verify-otp',
-        { phone, code },
+        { email, code },
       );
-      login(res.token, res.user);
+      login(res.user);
       onSuccess?.();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid OTP');
@@ -71,26 +71,26 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
             <span className="h-px flex-1 bg-border" />
           </div>
           <h2 className="font-display text-3xl mb-2">
-            {step === 'phone' ? 'Enter Your Phone' : 'Verify OTP'}
+            {step === 'email' ? 'Enter Your Email' : 'Verify OTP'}
           </h2>
           <p className="font-sans text-muted-foreground text-sm">
-            {step === 'phone'
-              ? "We'll send a 6-digit code to verify your number."
-              : `Code sent to ${phone}. Check your SMS.`}
+            {step === 'email'
+              ? "We'll send a 6-digit code to verify your email."
+              : `Code sent to ${email}. Check your inbox.`}
           </p>
         </div>
 
-        {step === 'phone' ? (
+        {step === 'email' ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div>
               <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
-                Phone Number
+                Email Address
               </label>
               <Input
-                type="tel"
-                placeholder="+91XXXXXXXXXX"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 autoFocus
               />
             </div>
@@ -126,12 +126,12 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
               size="sm"
               className="w-full"
               onClick={() => {
-                setStep('phone');
+                setStep('email');
                 setCode('');
                 setError('');
               }}
             >
-              Change number
+              Change email
             </Button>
           </form>
         )}

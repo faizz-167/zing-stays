@@ -1,18 +1,23 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { db } from '../db';
-import { listings, contactLeads, users } from '../db/schema';
+import { listings, contactLeads, users, cities, localities } from '../db/schema';
 import { eq, and, desc, gte, lte, SQL } from 'drizzle-orm';
-import { requireAuth, AuthRequest } from '../middleware/auth';
+import { requireAuth, AuthRequest, getAuthPayload } from '../middleware/auth';
+import { contactRevealLimiter } from '../middleware/rateLimit';
 import { calculateCompleteness, getTrustBadges } from '../services/completeness';
 import { indexListing, removeListing } from '../services/search';
+import { cacheGet, cacheSet, cacheInvalidate, cacheInvalidateByPrefix } from '../lib/redis';
 import { z } from 'zod';
 
 const router = Router();
 
-const createListingSchema = z.object({
+const listingInputSchema = z.object({
   title: z.string().min(5).max(200),
-  city: z.string().min(2).max(100),
-  locality: z.string().min(2).max(100),
+  city: z.string().min(2).max(100).optional(),
+  locality: z.string().min(2).max(100).optional(),
+  cityId: z.number().int().positive().optional(),
+  localityId: z.number().int().positive().optional(),
+  intent: z.enum(['buy', 'rent']).optional().default('rent'),
   price: z.number().int().min(500).max(500000),
   roomType: z.enum(['single', 'double', 'shared']),
   propertyType: z.enum(['pg', 'hostel', 'apartment', 'flat']),
@@ -26,6 +31,25 @@ const createListingSchema = z.object({
   images: z.array(z.string().url()).optional().default([]),
 });
 
+const createListingSchema = listingInputSchema.superRefine((value, ctx) => {
+  if (!value.city && !value.cityId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['city'],
+      message: 'City or cityId is required',
+    });
+  }
+  if (!value.locality && !value.localityId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['locality'],
+      message: 'Locality or localityId is required',
+    });
+  }
+});
+
+const updateListingSchema = listingInputSchema.partial();
+
 const listingsQuerySchema = z.object({
   city: z.string().optional(),
   locality: z.string().optional(),
@@ -38,6 +62,112 @@ const listingsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
+
+type ListingLocationInput = {
+  city?: string;
+  locality?: string;
+  cityId?: number;
+  localityId?: number;
+};
+
+type ExistingListingLocation = {
+  city: string;
+  locality: string;
+  cityId: number | null;
+  localityId: number | null;
+};
+
+const LISTINGS_LIST_CACHE_PREFIX = 'cache:listings:list:';
+const LISTING_DETAIL_CACHE_PREFIX = 'cache:listings:detail:';
+
+function getListingsListCacheKey(query: Request['query']): string {
+  const params = new URLSearchParams();
+  Object.entries(query)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .forEach(([key, value]) => {
+      if (value === undefined) return;
+      if (Array.isArray(value)) {
+        value
+          .filter((item): item is string => typeof item === 'string')
+          .forEach((item) => params.append(key, item));
+        return;
+      }
+      if (typeof value === 'string') {
+        params.set(key, value);
+      }
+    });
+
+  return `${LISTINGS_LIST_CACHE_PREFIX}${params.toString()}`;
+}
+
+function getListingDetailCacheKey(id: number): string {
+  return `${LISTING_DETAIL_CACHE_PREFIX}${id}`;
+}
+
+async function invalidateListingCaches(listingId?: number): Promise<void> {
+  const invalidations: Promise<unknown>[] = [cacheInvalidateByPrefix(LISTINGS_LIST_CACHE_PREFIX)];
+  if (listingId !== undefined) {
+    invalidations.push(cacheInvalidate(getListingDetailCacheKey(listingId)));
+  }
+  await Promise.all(invalidations);
+}
+
+async function resolveListingLocation(
+  input: ListingLocationInput,
+  existing?: ExistingListingLocation
+): Promise<{ city: string; locality: string; cityId: number | null; localityId: number | null }> {
+  let resolvedCity = input.city ?? existing?.city;
+  let resolvedLocality = input.locality ?? existing?.locality;
+  let resolvedCityId = input.cityId ?? existing?.cityId ?? null;
+  let resolvedLocalityId = input.localityId ?? existing?.localityId ?? null;
+
+  let cityRow = resolvedCityId
+    ? await db.select({ id: cities.id, name: cities.name }).from(cities).where(eq(cities.id, resolvedCityId)).limit(1).then(rows => rows[0])
+    : undefined;
+  if (resolvedCityId && !cityRow) {
+    throw new Error('Selected city does not exist');
+  }
+
+  const localityRow = resolvedLocalityId
+    ? await db
+        .select({ id: localities.id, name: localities.name, cityId: localities.cityId })
+        .from(localities)
+        .where(eq(localities.id, resolvedLocalityId))
+        .limit(1)
+        .then(rows => rows[0])
+    : undefined;
+  if (resolvedLocalityId && !localityRow) {
+    throw new Error('Selected locality does not exist');
+  }
+
+  if (localityRow) {
+    if (!resolvedCityId) {
+      resolvedCityId = localityRow.cityId;
+      cityRow = await db.select({ id: cities.id, name: cities.name }).from(cities).where(eq(cities.id, resolvedCityId)).limit(1).then(rows => rows[0]);
+    } else if (localityRow.cityId !== resolvedCityId) {
+      throw new Error('Selected locality does not belong to the selected city');
+    }
+    resolvedLocality = localityRow.name;
+  }
+
+  if (cityRow) {
+    resolvedCity = cityRow.name;
+  }
+
+  if (!resolvedCity) {
+    throw new Error('City or cityId is required');
+  }
+  if (!resolvedLocality) {
+    throw new Error('Locality or localityId is required');
+  }
+
+  return {
+    city: resolvedCity,
+    locality: resolvedLocality,
+    cityId: resolvedCityId,
+    localityId: resolvedLocalityId,
+  };
+}
 
 // GET /api/listings — public list with filters
 router.get('/', async (req, res) => {
@@ -57,7 +187,14 @@ router.get('/', async (req, res) => {
   if (price_max !== undefined) conditions.push(lte(listings.price, price_max));
 
   const offset = (page - 1) * limit;
+  const cacheKey = getListingsListCacheKey(req.query);
   try {
+    const cached = await cacheGet(cacheKey) as { data: unknown[]; page: number; limit: number } | null;
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
     const rows = await db
       .select()
       .from(listings)
@@ -65,11 +202,28 @@ router.get('/', async (req, res) => {
       .orderBy(desc(listings.completenessScore))
       .limit(limit)
       .offset(offset);
-    const withBadges = rows.map(l => ({ ...l, badges: getTrustBadges(l) }));
-    res.json({ data: withBadges, page, limit });
+    const payload = { data: rows.map(l => ({ ...l, badges: getTrustBadges(l) })), page, limit };
+    await cacheSet(cacheKey, payload, 60);
+    res.json(payload);
   } catch (err) {
     console.error('listings list error:', err);
     res.status(500).json({ error: 'Failed to fetch listings' });
+  }
+});
+
+// GET /api/listings/mine — owner/admin listing management view
+router.get('/mine', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(listings)
+      .where(eq(listings.ownerId, req.user!.userId))
+      .orderBy(desc(listings.updatedAt));
+    const withBadges = rows.map((listing) => ({ ...listing, badges: getTrustBadges(listing) }));
+    res.json({ data: withBadges });
+  } catch (err) {
+    console.error('my listings error:', err);
+    res.status(500).json({ error: 'Failed to fetch your listings' });
   }
 });
 
@@ -78,14 +232,36 @@ router.get('/:id', async (req, res) => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
   try {
+    const requester = getAuthPayload(req);
+    const canUseCache = requester === undefined;
+    const cacheKey = getListingDetailCacheKey(id);
+
+    if (canUseCache) {
+      const cached = await cacheGet(cacheKey) as Record<string, unknown> | null;
+      if (cached) {
+        res.json(cached);
+        return;
+      }
+    }
+
     const [listing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
     if (!listing) { res.status(404).json({ error: 'Listing not found' }); return; }
+    const canViewNonPublic =
+      requester !== undefined && (requester.isAdmin || requester.userId === listing.ownerId);
+    if (listing.status !== 'active' && !canViewNonPublic) {
+      res.status(404).json({ error: 'Listing not found' });
+      return;
+    }
     const [owner] = await db
       .select({ name: users.name })
       .from(users)
       .where(eq(users.id, listing.ownerId))
       .limit(1);
-    res.json({ ...listing, ownerName: owner?.name, badges: getTrustBadges(listing) });
+    const payload = { ...listing, ownerName: owner?.name, badges: getTrustBadges(listing) };
+    if (canUseCache) {
+      await cacheSet(cacheKey, payload, 300);
+    }
+    res.json(payload);
   } catch (err) {
     console.error('listing detail error:', err);
     res.status(500).json({ error: 'Failed to fetch listing' });
@@ -98,14 +274,23 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   if (!result.success) {
     res.status(400).json({ error: result.error.issues[0].message }); return;
   }
-  const data = result.data;
-  const completenessScore = calculateCompleteness(data as Parameters<typeof calculateCompleteness>[0]);
   try {
+    const data = result.data;
+    const resolvedLocation = await resolveListingLocation(data);
+    const completenessScore = calculateCompleteness({
+      ...data,
+      city: resolvedLocation.city,
+      locality: resolvedLocation.locality,
+    } as Parameters<typeof calculateCompleteness>[0]);
+
     const [listing] = await db.insert(listings).values({
       ownerId: req.user!.userId,
       title: data.title,
-      city: data.city,
-      locality: data.locality,
+      city: resolvedLocation.city,
+      locality: resolvedLocation.locality,
+      cityId: resolvedLocation.cityId,
+      localityId: resolvedLocation.localityId,
+      intent: data.intent,
       price: data.price,
       roomType: data.roomType,
       propertyType: data.propertyType,
@@ -123,8 +308,12 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     indexListing({
       id: listing.id,
       title: listing.title,
+      description: listing.description ?? undefined,
       city: listing.city,
       locality: listing.locality,
+      city_id: listing.cityId ?? undefined,
+      locality_id: listing.localityId ?? undefined,
+      intent: listing.intent,
       landmark: listing.landmark ?? undefined,
       price: listing.price,
       room_type: listing.roomType,
@@ -137,6 +326,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       created_at: listing.createdAt.toISOString(),
     }).catch(err => console.error('Meilisearch index error:', err));
 
+    await invalidateListingCaches(listing.id);
     res.status(201).json(listing);
   } catch (err) {
     console.error('create listing error:', err);
@@ -154,21 +344,47 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     if (existing.ownerId !== req.user!.userId && !req.user!.isAdmin) {
       res.status(403).json({ error: 'Forbidden' }); return;
     }
-    const result = createListingSchema.partial().safeParse(req.body);
+    const result = updateListingSchema.safeParse(req.body);
     if (!result.success) { res.status(400).json({ error: result.error.issues[0].message }); return; }
-    const merged = { ...existing, ...result.data };
+
+    const resolvedLocation = await resolveListingLocation(result.data, {
+      city: existing.city,
+      locality: existing.locality,
+      cityId: existing.cityId,
+      localityId: existing.localityId,
+    });
+    const merged = {
+      ...existing,
+      ...result.data,
+      city: resolvedLocation.city,
+      locality: resolvedLocation.locality,
+      cityId: resolvedLocation.cityId,
+      localityId: resolvedLocation.localityId,
+    };
     const completenessScore = calculateCompleteness(merged as Parameters<typeof calculateCompleteness>[0]);
     const [updated] = await db
       .update(listings)
-      .set({ ...result.data, completenessScore, updatedAt: new Date() })
+      .set({
+        ...result.data,
+        city: resolvedLocation.city,
+        locality: resolvedLocation.locality,
+        cityId: resolvedLocation.cityId,
+        localityId: resolvedLocation.localityId,
+        completenessScore,
+        updatedAt: new Date(),
+      })
       .where(eq(listings.id, id))
       .returning();
 
     indexListing({
       id: updated.id,
       title: updated.title,
+      description: updated.description ?? undefined,
       city: updated.city,
       locality: updated.locality,
+      city_id: updated.cityId ?? undefined,
+      locality_id: updated.localityId ?? undefined,
+      intent: updated.intent,
       landmark: updated.landmark ?? undefined,
       price: updated.price,
       room_type: updated.roomType,
@@ -181,6 +397,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
       created_at: updated.createdAt.toISOString(),
     }).catch(err => console.error('Meilisearch index error:', err));
 
+    await invalidateListingCaches(updated.id);
     res.json(updated);
   } catch (err) {
     console.error('update listing error:', err);
@@ -200,6 +417,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
     }
     await db.delete(listings).where(eq(listings.id, id));
     removeListing(id).catch(err => console.error('Meilisearch remove error:', err));
+    await invalidateListingCaches(id);
     res.json({ message: 'Listing deleted' });
   } catch (err) {
     console.error('delete listing error:', err);
@@ -208,12 +426,17 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // POST /api/listings/:id/contact — reveal owner phone (auth required)
-router.post('/:id/contact', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:id/contact', requireAuth, contactRevealLimiter, async (req: AuthRequest, res) => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
   try {
     const [listing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
     if (!listing) { res.status(404).json({ error: 'Not found' }); return; }
+    const canViewNonPublic = req.user!.isAdmin || req.user!.userId === listing.ownerId;
+    if (listing.status !== 'active' && !canViewNonPublic) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
     await db
       .insert(contactLeads)
       .values({ userId: req.user!.userId, listingId: id })
@@ -225,6 +448,7 @@ router.post('/:id/contact', requireAuth, async (req: AuthRequest, res) => {
       .where(eq(users.id, listing.ownerId))
       .limit(1);
     if (!owner) { res.status(404).json({ error: 'Owner not found' }); return; }
+    if (!owner.phone) { res.status(409).json({ error: 'Owner has not added a contact phone number yet' }); return; }
     res.json({ phone: owner.phone, name: owner.name });
   } catch (err) {
     console.error('contact reveal error:', err);

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 
 async function uploadToImageKit(file: File, authParams: { signature: string; expire: string; token: string }): Promise<string> {
@@ -47,7 +48,13 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
       <div className="grid grid-cols-3 gap-3">
         {images.map(url => (
           <div key={url} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
-            <img src={url} alt="Listing" className="w-full h-full object-cover" />
+            <Image
+              src={url}
+              alt="Listing"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 33vw, 160px"
+            />
             <button
               type="button"
               onClick={() => removeImage(url)}

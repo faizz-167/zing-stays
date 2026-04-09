@@ -1,18 +1,12 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { requireServerUser } from '@/lib/server-auth';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace('/auth');
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) return null;
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireServerUser();
+  if (!user) {
+    redirect('/auth');
+  }
 
   return (
     <div className="max-w-content mx-auto px-6 py-12">

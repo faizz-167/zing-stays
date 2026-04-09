@@ -1,21 +1,18 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { ListingCardData } from '@/lib/types';
 import Card from '@/components/ui/Card';
 import TrustBadge from '@/components/ui/TrustBadge';
 
+const TRUST_BADGES = ['verified_owner', 'well_detailed', 'recently_updated'] as const;
+type TrustBadgeType = (typeof TRUST_BADGES)[number];
+
+function isTrustBadge(value: string): value is TrustBadgeType {
+  return (TRUST_BADGES as readonly string[]).includes(value);
+}
+
 interface ListingCardProps {
-  listing: {
-    id: number;
-    title: string;
-    city: string;
-    locality: string;
-    price: number;
-    roomType: string;
-    propertyType: string;
-    images: string[];
-    badges: string[];
-    foodIncluded: boolean;
-  };
+  listing: ListingCardData;
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
@@ -67,8 +64,8 @@ export default function ListingCard({ listing }: ListingCardProps) {
           </div>
           {listing.badges.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
-              {listing.badges.map(b => (
-                <TrustBadge key={b} type={b as any} />
+              {listing.badges.filter(isTrustBadge).map((badge) => (
+                <TrustBadge key={badge} type={badge} />
               ))}
             </div>
           )}

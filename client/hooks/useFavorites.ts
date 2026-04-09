@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import type { ListingCardData } from '@/lib/types';
 
 export function useFavorites() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['favorites'],
-    queryFn: () => api.get<{ data: unknown[] }>('/favorites'),
+    queryFn: () => api.get<{ data: ListingCardData[] }>('/favorites'),
     enabled: isAuthenticated,
   });
 }

@@ -5,6 +5,7 @@ import SearchBar from '@/components/search/SearchBar';
 import ListingFilters from '@/components/listings/ListingFilters';
 import ListingCard from '@/components/listings/ListingCard';
 import SectionLabel from '@/components/ui/SectionLabel';
+import type { ListingCardData } from '@/lib/types';
 import { useSearch } from '@/hooks/useSearch';
 
 function ListingsContent() {
@@ -38,7 +39,7 @@ function ListingsContent() {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {listings.map((listing: any) => (
+          {listings.map((listing: ListingCardData) => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>

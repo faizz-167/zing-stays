@@ -33,7 +33,7 @@ export function calculateCompleteness(listing: Partial<Listing>): number {
 
 export function getTrustBadges(listing: Listing): string[] {
   const badges: string[] = [];
-  badges.push('phone_verified'); // All owners verify phone on signup
+  badges.push('verified_owner');
   if (listing.completenessScore >= 80) badges.push('well_detailed');
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   if (listing.updatedAt > thirtyDaysAgo) badges.push('recently_updated');

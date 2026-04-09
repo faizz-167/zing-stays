@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import ImageGallery from '@/components/listings/ImageGallery';
 import ContactButton from '@/components/listings/ContactButton';
 import TrustBadge from '@/components/ui/TrustBadge';
 import SectionLabel from '@/components/ui/SectionLabel';
 
-const BADGE_TYPES = ['phone_verified', 'well_detailed', 'recently_updated'] as const;
+const BADGE_TYPES = ['verified_owner', 'well_detailed', 'recently_updated'] as const;
 type BadgeType = (typeof BADGE_TYPES)[number];
 
 function isBadgeType(value: string): value is BadgeType {
@@ -40,7 +41,11 @@ interface Listing {
 }
 
 async function getListing(id: string): Promise<Listing | null> {
+  const cookieStore = await cookies();
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${id}`, {
+    headers: {
+      Cookie: cookieStore.toString(),
+    },
     next: { revalidate: 60 },
   });
   if (!res.ok) return null;

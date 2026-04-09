@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import type { ListingCardData, SearchListingHit } from '@/lib/types';
 
 export interface SearchFilters {
   q?: string;
   city?: string;
   locality?: string;
+  cityId?: string;
+  localityId?: string;
+  intent?: 'buy' | 'rent';
   room_type?: string;
   property_type?: string;
   food_included?: string;
@@ -21,7 +25,23 @@ export function useSearch(filters: SearchFilters) {
 
   return useQuery({
     queryKey: ['search', filters],
-    queryFn: () => api.get<{ hits: any[] }>(`/search?${params.toString()}`),
+    queryFn: async () => {
+      const response = await api.get<{ hits: SearchListingHit[] }>(`/search?${params.toString()}`);
+      return {
+        hits: response.hits.map<ListingCardData>((hit) => ({
+          id: hit.id,
+          title: hit.title,
+          city: hit.city,
+          locality: hit.locality,
+          price: hit.price,
+          roomType: hit.room_type,
+          propertyType: hit.property_type,
+          images: hit.images ?? [],
+          badges: hit.badges ?? [],
+          foodIncluded: hit.food_included,
+        })),
+      };
+    },
     staleTime: 30 * 1000,
   });
 }
@@ -35,7 +55,7 @@ export function useListings(filters: Omit<SearchFilters, 'q'> & { page?: number 
   return useQuery({
     queryKey: ['listings', filters],
     queryFn: () =>
-      api.get<{ data: any[]; page: number; limit: number }>(`/listings?${params.toString()}`),
+      api.get<{ data: ListingCardData[]; page: number; limit: number }>(`/listings?${params.toString()}`),
     staleTime: 30 * 1000,
   });
 }

@@ -4,40 +4,26 @@ import { createContext, useContext } from 'react';
 
 export interface AuthUser {
   id: number;
-  phone: string;
+  email: string;
+  phone?: string | null;
   name?: string;
   isAdmin?: boolean;
 }
 
 export interface AuthContextValue {
   user: AuthUser | null;
-  token: string | null;
-  login: (token: string, user: AuthUser) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isReady: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
   user: null,
-  token: null,
   login: () => {},
   logout: () => {},
   isAuthenticated: false,
+  isReady: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
-
-export function getStoredAuth(): { token: string; user: AuthUser } | null {
-  if (typeof window === 'undefined') return null;
-
-  const token = localStorage.getItem('zindstay_token');
-  const userStr = localStorage.getItem('zindstay_user');
-
-  if (!token || !userStr) return null;
-
-  try {
-    return { token, user: JSON.parse(userStr) };
-  } catch {
-    return null;
-  }
-}

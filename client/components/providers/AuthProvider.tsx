@@ -1,37 +1,45 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AuthContext, AuthUser, getStoredAuth } from '@/lib/auth';
+import { AuthContext, AuthUser } from '@/lib/auth';
+import { api } from '@/lib/api';
+
+interface ProviderState {
+  user: AuthUser | null;
+  isReady: boolean;
+}
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [state, setState] = useState<ProviderState>({ user: null, isReady: false });
 
   useEffect(() => {
-    const stored = getStoredAuth();
-    if (stored) {
-      setToken(stored.token);
-      setUser(stored.user);
+    api.get<{ user: AuthUser }>('/auth/me')
+      .then(({ user }) => setState({ user, isReady: true }))
+      .catch(() => setState({ user: null, isReady: true }));
+  }, []);
+
+  const login = useCallback((user: AuthUser) => {
+    setState({ user, isReady: true });
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout', {});
+    } catch {
+      // ignore — clear state regardless
     }
-  }, []);
-
-  const login = useCallback((newToken: string, newUser: AuthUser) => {
-    localStorage.setItem('zindstay_token', newToken);
-    localStorage.setItem('zindstay_user', JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('zindstay_token');
-    localStorage.removeItem('zindstay_user');
-    setToken(null);
-    setUser(null);
+    setState({ user: null, isReady: true });
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, login, logout, isAuthenticated: !!token }),
-    [user, token, login, logout],
+    () => ({
+      user: state.user,
+      login,
+      logout,
+      isAuthenticated: !!state.user,
+      isReady: state.isReady,
+    }),
+    [state, login, logout],
   );
 
   return (

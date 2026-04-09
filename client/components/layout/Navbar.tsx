@@ -27,7 +27,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {isAuthenticated ? (
             <>
-              <span className="hidden md:block font-sans text-sm text-muted-foreground">{user?.name || user?.phone}</span>
+              <span className="hidden md:block font-sans text-sm text-muted-foreground">{user?.name || user?.email}</span>
               <Button variant="ghost" size="sm" onClick={logout}>Sign Out</Button>
             </>
           ) : (

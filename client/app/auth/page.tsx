@@ -5,12 +5,16 @@ import { useAuth } from '@/lib/auth';
 import OtpModal from '@/components/auth/OtpModal';
 
 export default function AuthPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/dashboard');
-  }, [isAuthenticated, router]);
+    if (isReady && isAuthenticated) router.replace('/dashboard');
+  }, [isAuthenticated, isReady, router]);
+
+  if (!isReady || isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center">

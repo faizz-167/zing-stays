@@ -7,7 +7,7 @@ const AMENITIES = ['WiFi Included', 'Meals Provided', 'AC Room', 'Attached Bath'
 const HOW_IT_WORKS = [
   { step: '01', title: 'Search Your City', desc: 'Enter your city, locality, or nearby landmark to find available rooms instantly.' },
   { step: '02', title: 'Browse & Filter', desc: 'Filter by price, room type, amenities, and gender preference to narrow your choices.' },
-  { step: '03', title: 'Contact Owner', desc: 'Verify your phone number once and get direct access to owner contact details.' },
+  { step: '03', title: 'Contact Owner', desc: 'Verify your email once and get direct access to owner contact details.' },
 ];
 
 export default function HomePage() {

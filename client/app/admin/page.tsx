@@ -2,24 +2,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import type { AdminListing } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import SectionLabel from '@/components/ui/SectionLabel';
 
 export default function AdminPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isReady } = useAuth();
   const router = useRouter();
   const qc = useQueryClient();
+  const isAdmin = !!user?.isAdmin;
 
   useEffect(() => {
-    if (isAuthenticated && !(user as any)?.isAdmin) router.replace('/');
-  }, [isAuthenticated, user, router]);
+    if (!isReady) return;
+    if (!isAuthenticated) {
+      router.replace('/auth');
+      return;
+    }
+    if (!isAdmin) {
+      router.replace('/');
+    }
+  }, [isAdmin, isAuthenticated, isReady, router]);
 
   const { data, isPending } = useQuery({
     queryKey: ['admin-listings'],
-    queryFn: () => api.get<{ data: any[] }>('/admin/listings'),
-    enabled: isAuthenticated && !!(user as any)?.isAdmin,
+    queryFn: () => api.get<{ data: AdminListing[] }>('/admin/listings'),
+    enabled: isReady && isAuthenticated && isAdmin,
   });
 
   const statusMutation = useMutation({
@@ -27,6 +36,10 @@ export default function AdminPage() {
       api.put(`/admin/listings/${id}/status`, { status }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-listings'] }),
   });
+
+  if (!isReady || !isAuthenticated || !isAdmin) {
+    return null;
+  }
 
   return (
     <div className="max-w-content mx-auto px-6 py-12">
@@ -36,7 +49,7 @@ export default function AdminPage() {
         <div className="animate-pulse h-96 bg-muted rounded-lg" />
       ) : (
         <div className="space-y-3">
-          {data?.data.map((l: any) => (
+          {data?.data.map((l) => (
             <div key={l.id} className="flex items-center justify-between p-4 border border-border rounded-lg gap-4">
               <div className="flex-1 min-w-0">
                 <p className="font-display truncate">{l.title}</p>
