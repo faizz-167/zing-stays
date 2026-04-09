@@ -1,19 +1,37 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { favorites, listings } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { favorites, listings, cities, localities } from '../db/schema';
+import { eq, and, desc, getTableColumns } from 'drizzle-orm';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { getTrustBadges } from '../services/completeness';
 
 const router = Router();
+const favoriteListingColumns = {
+  ...getTableColumns(listings),
+  city: cities.name,
+  locality: localities.name,
+};
 
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const rows = await db
-      .select({ listing: listings })
+      .select(favoriteListingColumns)
       .from(favorites)
       .innerJoin(listings, eq(favorites.listingId, listings.id))
-      .where(eq(favorites.userId, req.user!.userId));
-    res.json({ data: rows.map(r => r.listing) });
+      .leftJoin(cities, eq(listings.cityId, cities.id))
+      .leftJoin(localities, eq(listings.localityId, localities.id))
+      .where(eq(favorites.userId, req.user!.userId))
+      .orderBy(desc(favorites.createdAt));
+    res.json({
+      data: rows
+        .filter((row) => row.status === 'active')
+        .map((row) => ({
+          ...row,
+          city: row.city ?? '',
+          locality: row.locality ?? '',
+          badges: getTrustBadges(row),
+        })),
+    });
   } catch (err) {
     console.error('favorites list error:', err);
     res.status(500).json({ error: 'Failed to fetch favorites' });

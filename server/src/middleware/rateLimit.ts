@@ -38,12 +38,16 @@ function createRateLimiter(options: RateLimitOptions) {
   };
 }
 
+/**
+ * Returns the real client IP.
+ *
+ * Express sets req.ip correctly when app.set('trust proxy', N) is configured
+ * to match the number of trusted reverse-proxy hops in front of this server.
+ * Never parse X-Forwarded-For manually — it is trivially spoofable by any
+ * client that can set arbitrary headers.
+ */
 function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0]!.trim();
-  }
-  return req.ip || req.socket.remoteAddress || 'unknown';
+  return req.ip ?? req.socket.remoteAddress ?? 'unknown';
 }
 
 /** 5 OTP send requests per email per 10 minutes */
@@ -68,4 +72,28 @@ export const contactRevealLimiter = createRateLimiter({
   max: 20,
   windowSeconds: 60 * 60,
   keyFn: (req) => String((req as AuthRequest).user?.userId ?? getClientIp(req)),
+});
+
+/** 30 image auth requests per user per 10 minutes */
+export const imageAuthLimiter = createRateLimiter({
+  keyPrefix: 'image_auth',
+  max: 30,
+  windowSeconds: 10 * 60,
+  keyFn: (req) => String((req as AuthRequest).user?.userId ?? getClientIp(req)),
+});
+
+/** 5 review submissions per user per hour */
+export const reviewPostLimiter = createRateLimiter({
+  keyPrefix: 'review_post',
+  max: 5,
+  windowSeconds: 60 * 60,
+  keyFn: (req) => String((req as AuthRequest).user?.userId ?? getClientIp(req)),
+});
+
+/** 60 search requests per IP per minute */
+export const searchLimiter = createRateLimiter({
+  keyPrefix: 'search',
+  max: 60,
+  windowSeconds: 60,
+  keyFn: getClientIp,
 });

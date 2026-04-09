@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface RoomStats {
   median: number;
@@ -41,34 +41,19 @@ interface RentEstimatorProps {
 }
 
 export default function RentEstimator({ localityId, apiBase = '/api' }: RentEstimatorProps) {
-  const [data, setData] = useState<RentEstimate | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['rent-estimate', apiBase, localityId],
+    queryFn: async () => {
+      const response = await fetch(`${apiBase}/utilities/rent-estimate/${localityId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+      return response.json() as Promise<RentEstimate>;
+    },
+  });
 
-    fetch(`${apiBase}/utilities/rent-estimate/${localityId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<RentEstimate>;
-      })
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [localityId, apiBase]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
@@ -77,7 +62,7 @@ export default function RentEstimator({ localityId, apiBase = '/api' }: RentEsti
     );
   }
 
-  if (error || !data || !data.overall) {
+  if (isError || !data || !data.overall) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-400">Rent data unavailable for this area.</p>

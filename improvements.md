@@ -1,506 +1,271 @@
-# Search Experience Enhancements
-
-## Objective
+# Product Improvement Brief
 
-Improve the property search flow so users:
-
-1. choose whether they want to `Buy` or `Rent`,
-2. choose a city,
-3. choose up to 3 localities within that city,
-4. see nearby locality suggestions after selecting one locality,
-5. choose the relevant property type based on `Buy` or `Rent`,
-6. search with clearer, faster, and more guided interactions.
+This document defines the intended product and UX changes for the next round of work. It is written as a short implementation brief so another AI or engineer can understand the desired outcome quickly.
 
-This note compares the current implementation with the requested experience and lists the improvements that should be made.
+## Scope
 
-## What Is Currently There
+The work is split into five areas:
 
-### 1. Search entry is a single free-text field
+1. Foundation updates across the frontend
+2. Guided search improvements on the homepage and listings search
+3. Filter panel and listing card redesign
+4. Authentication and poster verification redesign
+5. Security and UX bug fixes
 
-- The homepage and listings page both use the same `SearchBar` component.
-- It currently has only one text input with the placeholder: `Search by city, locality or landmark...`
-- On submit, it navigates to `/listings?q=...`
-- There is no guided sequence such as transaction mode -> city -> locality -> property type.
+This brief intentionally does not include code-level instructions or schema details.
 
-### 2. Filters exist, but only after search results load
+## Global Constraints
 
-- The listings page has sidebar filters for:
-  - price range
-  - room type
-  - property type
-  - gender preference
-  - food included
-- This means the user first searches broadly, then refines on the results page.
-- The requested reference flow is different because it asks users to make the main decisions in the top search bar before searching.
+- The database will be cleared and the system will start fresh.
+- Do not preserve compatibility with the current OTP-only auth flow.
+- Keep the implementation brief and product-first.
+- Use consistent URL-driven state for search and filters.
+- Prioritize correctness of user flows over visual polish.
 
-### 3. Backend supports only one city and one exact locality filter
+## 1. Foundation
 
-- `/api/search` supports:
-  - `q`
-  - `city`
-  - `locality`
-  - `room_type`
-  - `property_type`
-  - `food_included`
-  - `gender`
-  - `price_min`
-  - `price_max`
-- There is no `intent` or `listing mode` filter such as `buy` or `rent`.
-- `city` and `locality` are both single-value filters.
-- There is no support for selecting multiple localities.
-- There is no dedicated suggestion/autocomplete endpoint for cities or localities.
+Apply the following cross-cutting improvements:
 
-### 4. Search index is searchable, but not structured for guided suggestions
+- Standardize UI primitives using a consistent component system.
+- Standardize form handling and validation across all forms.
+- Fix URL and state synchronization for search so clearing a field and submitting updates the URL correctly, including empty search states.
 
-- Meilisearch indexes:
-  - title
-  - description
-  - city
-  - locality
-  - landmark
-- This helps general text search, but it does not yet provide a clean "pick city first, then suggest matching localities" experience.
-- There is also no city-locality catalog exposed to the frontend.
+Affected forms include:
 
-### 5. Listing data model is simple and single-location based
+- login and registration
+- post listing and edit listing
+- profile
+- review form
+- content editor
 
-- Each listing stores:
-  - no buy/rent transaction mode
-  - one `city`
-  - one `locality`
-  - optional `landmark`
-  - one `roomType`
-  - one `propertyType`
-- This is sufficient for basic search, but not enough for a richer guided search unless transaction type and location values are both modeled more clearly.
+## 2. Guided Search Widget
 
-## Gaps Between Current State and Requested Experience
+Replace the homepage search bar with a guided search widget.
 
-### 1. No city-first search flow
+### Goal
 
-- Users can currently type anything first.
-- The requested behavior requires users to first choose `Buy` or `Rent`, then select a city.
-- This matters because both locality suggestions and property options should depend on the earlier selections.
+Help users reach relevant listing results faster by guiding them through intent, city, locality, and contextual sub-filters.
 
-### 2. No buy/rent mode in search
+### Homepage Widget Structure
 
-- The current app does not let users choose whether they want to buy or rent before searching.
-- Your requirement needs two primary top-level modes:
-  - `Buy`
-  - `Rent`
-- Property choices must change based on the selected mode.
+Row 1:
 
-### 3. No multi-locality selection
+- intent tabs: `Buy` and `Rent`
 
-- The current backend and frontend only handle one locality.
-- The requested behavior allows users to select up to 3 localities.
+Row 2:
 
-### 4. No locality autocomplete dropdown with city context
+- city selector
+- locality typeahead
+- up to 3 selected locality chips, each removable
+- search button
 
-- The reference shows locality suggestions while typing.
-- The current app does not show suggestions.
-- The request specifically says that when users search localities, the city should also appear in the suggestion so selection is easier.
+Row 3:
 
-### 5. No nearby-locality recommendations after a locality is selected
+- after the first locality is selected, show nearby locality chips
+- users can add nearby localities to broaden the search
 
-- The current app does not show nearby places once the user picks a locality.
-- Your reference expects the search UI to suggest nearby localities as quick-add options.
-- This is important because many users know one familiar area and then want the product to help expand the search to surrounding neighborhoods.
+Row 4:
 
-### 6. Property choice is not part of the main top search workflow
+- contextual sub-filter chips based on intent and property type
 
-- Right now property type is only a sidebar filter on the results page.
-- The new design expects this choice to happen in the main search bar before running the search.
+Rules:
 
-### 7. Current taxonomy does not fully match the requested behavior
+- `Buy` should focus only on apartment and flat type inventory
+- `PG` and `Hostel` sub-options should not appear for `Buy`
+- apartment/flat options should surface BHK-style choices
+- PG/Hostel options should surface occupancy-style choices
 
-- The product currently supports rental-focused property types such as `pg`, `hostel`, `apartment`, and `flat`.
-- Your clarified requirement is:
-  - if user selects `Buy`, show only options like `Full House` and `Apartment`
-  - if user selects `Rent`, show options like `PG/Hostel`, `Full House`, and `Apartment`
-- This means the taxonomy and backend values need alignment before implementation, otherwise the UI labels and backend values will drift.
+### Search Behavior
 
-## Improvements That Should Be Made
+- Locality suggestions should appear while typing.
+- Suggestions can be filtered client-side from the loaded list for the selected city.
+- The widget must submit all selected state through URL parameters to the listings page.
+- Multi-locality search must be supported.
 
-### A. Search UX Improvements
+### Backend Expectations
 
-### 1. Replace the single text field with a structured search bar
+- support nearby localities lookup
+- support multiple localities in search
+- support BHK-related filtering in search
 
-The new top search experience should be:
+## 3. Filter Panel Redesign
 
-1. `Buy / Rent` selector
-2. `City` selector
-3. `Localities` autocomplete multi-select, limited to 3
-4. `Nearby Localities` quick-add row after one locality is selected
-5. `Property Type` selector
-6. `Search` button
+Replace the current listings sidebar filter UI with a cleaner filter panel.
 
-Recommended behavior:
+### Filters to Support
 
-- User first selects `Buy` or `Rent`.
-- City is selected next.
-- Locality field stays disabled until a city is selected.
-- After city selection, the locality field shows suggestions only from that city.
-- After the first locality is selected, nearby localities are shown as quick-add chips.
-- Property type options update when the user switches between `Buy` and `Rent`.
-- Selected localities appear as chips/tags inside the field.
-- Users can remove any selected locality before search.
+- BHK type
+- price or rent range
+- availability
+- preferred tenants
+- furnishing
+- property type
+- gender preference
+- food included
 
-### 2. Add transaction mode tabs or segmented control
+### UX Requirements
 
-The top search bar should begin with a strong primary toggle:
+- use chip-style controls where appropriate
+- show active filter count in the filter header
+- include a reset action that restores default state
+- only show BHK-related filters when they are relevant to the selected intent or property type
 
-- `Buy`
-- `Rent`
+### State Requirements
 
-Expected behavior:
+- all filters must remain URL-driven
+- resetting filters must also reset the URL
+- filters should not conflict with the homepage guided search state
 
-- `Buy` changes the property type options to buy-relevant inventory only.
-- `Rent` changes the property type options to rental-relevant inventory only.
-- The selection should persist in the URL and on the results page.
+## 4. Listing Card Redesign
 
-Recommended query param:
+Redesign listing cards to be more informative and easier to scan.
 
-- `intent=buy`
-- `intent=rent`
+### Layout
 
-### 3. Show locality suggestions with city label
+- horizontal layout on desktop
+- image on the left
+- listing details on the right
+- stacked or mobile-friendly layout on smaller screens
 
-When the user types in the locality field:
+### Content
 
-- show matching locality suggestions,
-- include city in each suggestion label,
-- optionally include state if available.
+- title
+- locality and city line
+- explore nearby link
+- price
+- deposit when applicable
+- area when available
+- furnishing
+- property type
+- preferred tenants
+- availability
+- primary CTA for owner contact
+- favorite action
+- nearest landmark or distance information
 
-Suggested display format:
+### Goal
 
-- `Adambakkam, Chennai`
-- `Koramangala, Bangalore`
-- `Aundh, Pune`
+Make listing cards feel richer without forcing users to open the listing detail page for basic decision-making.
 
-This directly matches the user request that city should appear when localities are searched.
+## 5. Authentication Redesign
 
-### 4. Show nearby localities after the first locality is selected
+Replace the current OTP-as-login model with a normal user authentication system plus a separate poster verification flow.
 
-Once the user selects one locality:
+## Auth Model
 
-- show a `Nearby Localities` row below the locality field,
-- populate it with nearby or adjacent areas from the same city,
-- let users add them with one click,
-- exclude already selected localities,
-- stop allowing more additions once the user reaches the max of 3 selected localities.
+There are two distinct states:
 
-Suggested interaction:
+1. `Authenticated user`
+2. `Verified poster`
 
-- selected locality: `Velachery`
-- nearby suggestions: `Adambakkam`, `Madipakkam`, `Guindy`, `Taramani`
+These must not be treated as the same thing.
 
-This matches the reference pattern where choosing one locality helps users discover nearby places quickly.
+### Authenticated User
 
-### 5. Enforce max 3 localities in the UI
+Normal users should be able to log in using:
 
-- Users should not be able to select more than 3 localities.
-- Once 3 are selected:
-  - disable additional selection, or
-  - show a validation message such as `You can select up to 3 localities`.
+- Google OAuth
+- email and password
 
-### 6. Move property type selection into the main search bar
+This is standard account access for browsing, saving favorites, and general logged-in actions.
 
-- The property or house-type choice should be part of the hero search experience, not only a sidebar filter.
-- This reduces clicks and matches the reference flow.
+### Verified Poster
 
-Recommended option mapping based on your requirement:
+Posting a public listing requires an extra verification flow.
 
-- For `Buy`:
-  - `Full House`
-  - `Apartment`
+A user becomes a verified poster only after:
 
-- For `Rent`:
-  - `PG/Hostel`
-  - `Full House`
-  - `Apartment`
+- logging in
+- verifying email via OTP
+- providing a phone number
 
-Important note:
+Phone number collection is required, but phone OTP verification is not required in this phase.
 
-- the current backend property enum values are `pg`, `hostel`, `apartment`, and `flat`
-- UI labels such as `Full House` will need mapping to backend values such as `flat` or a newly defined canonical value
-- `PG/Hostel` may be a grouped UI option that maps to multiple backend values unless the data model is simplified
+### Posting Flow
 
-### B. Backend and API Improvements
+When a logged-in user clicks `Post`:
 
-### 1. Add support for multiple localities
+- allow them to create or edit a draft listing
+- do not allow publishing until verification is complete
 
-Current limitation:
+Verification gate before publish:
 
-- only one `locality` value can be sent to `/api/search`.
+- email OTP verification completed
+- phone number provided
 
-Required improvement:
+### Important Product Decision
 
-- support up to 3 localities in search requests.
+Google OAuth login does not automatically satisfy poster verification. Email OTP verification is still required before publishing a listing.
 
-Recommended API shape:
+### Auth UX Pages
 
-- `city=Bangalore`
-- `localities=Koramangala,Indiranagar,HSR Layout`
+Provide separate pages for:
 
-or repeated params:
+- login
+- registration
 
-- `localities=Koramangala`
-- `localities=Indiranagar`
-- `localities=HSR Layout`
+The previous OTP login modal should no longer be the main authentication model.
 
-Backend behavior:
+## 6. EMI Calculator Behavior
 
-- validate max 3 localities,
-- apply an `OR` filter across selected localities,
-- keep city filter mandatory when localities are supplied.
+- show the EMI calculator only on buy listings
+- remove it from locality pages that are primarily rent-focused
 
-### 2. Add search intent support
+## 7. Security and UX Fixes
 
-Current limitation:
+These items should be treated as high priority.
 
-- there is no field that distinguishes listings meant for sale versus listings meant for rent.
+### Owner Self-Review and Self-Lead Prevention
 
-Required improvement:
+- owners must not be able to reveal contact details for their own listings
+- owners must not be able to leave reviews on their own listings
 
-- add a search-level and listing-level field such as `intent` or `listingMode`
-- supported values:
-  - `buy`
-  - `rent`
+### Review Moderation Failure
 
-Backend behavior:
+- do not silently report success if review moderation queueing fails
+- the user should receive a proper failure response, or the review should be safely stored in a clearly pending state
 
-- `Buy` results should only show listings marked for sale
-- `Rent` results should only show listings marked for rent
-- property type options must be validated against the selected intent
+### Review Eligibility Messaging
 
-### 3. Add a location suggestion endpoint
+Do not hide the review section without explanation.
 
-The frontend needs a dedicated endpoint for dropdown suggestions.
+Show contextual messaging instead:
 
-Recommended endpoint:
+- not logged in: prompt user to sign in
+- logged in but has not unlocked contact: explain that owner contact reveal is required before reviewing
+- eligible user: show the review form
 
-- `/api/locations/suggest?city=Chennai&q=ada`
+## Edge Cases
 
-Recommended response:
+The implementation should account for the following:
 
-- list of matching localities for the selected city
-- include label fields suitable for display
+- user clears search text or filters and submits again
+- user selects multiple localities and then removes one or all
+- user switches between `Buy` and `Rent` after selecting filters that are no longer valid
+- user creates a draft listing before completing poster verification
+- user tries to publish without verified email or without a phone number
+- logged-in user can use normal app features without being a verified poster
+- owner cannot create artificial leads or reviews on their own listing
+- review submission cannot silently succeed if moderation infrastructure fails
+- mobile layout must remain usable for the guided search widget and redesigned listing cards
 
-Example response shape:
+## Suggested Delivery Order
 
-```json
-[
-  { "city": "Chennai", "locality": "Adambakkam", "label": "Adambakkam, Chennai" },
-  { "city": "Chennai", "locality": "Ayanavaram", "label": "Ayanavaram, Chennai" }
-]
-```
+Implement in this order:
 
-### 4. Add nearby-locality lookup support
+1. security and review-related fixes
+2. URL/state sync cleanup
+3. auth redesign and poster verification flow
+4. guided search widget
+5. filter panel redesign
+6. listing card redesign
+7. EMI visibility cleanup
 
-The frontend also needs a way to fetch nearby places after one locality is selected.
+## Out of Scope
 
-Recommended endpoint:
+The following are intentionally not specified in this brief:
 
-- `/api/locations/nearby?city=Chennai&locality=Velachery`
-
-Recommended response:
-
-- nearby localities ordered by relevance or proximity,
-- limited to a small list suitable for quick-add chips.
-
-Example response shape:
-
-```json
-[
-  { "city": "Chennai", "locality": "Adambakkam", "label": "Adambakkam, Chennai" },
-  { "city": "Chennai", "locality": "Madipakkam", "label": "Madipakkam, Chennai" },
-  { "city": "Chennai", "locality": "Guindy", "label": "Guindy, Chennai" }
-]
-```
-
-Data requirement:
-
-- this cannot be inferred reliably from raw listing text alone,
-- the system needs either:
-  - a curated nearby-locality mapping,
-  - geo coordinates per locality, or
-  - a location dataset with adjacency or proximity relationships.
-
-### 5. Normalize city and locality values
-
-This is important because suggestion quality depends on clean data.
-
-Problems likely to happen without normalization:
-
-- `Bangalore` vs `Bengaluru`
-- `HSR` vs `HSR Layout`
-- casing inconsistencies
-- duplicated localities with slightly different spellings
-
-Improvements needed:
-
-- normalize stored city/locality values,
-- define canonical display names,
-- consider a separate `locations` table or a derived searchable location index,
-- make listing creation reuse canonical city/locality values instead of free-form typing only.
-
-### C. Search Logic Improvements
-
-### 1. Search should be dependency-aware
-
-Expected search logic:
-
-- intent narrows the allowed property types,
-- city narrows the locality search space,
-- localities narrow the property search,
-- the first selected locality can trigger nearby-locality recommendations,
-- property type further filters results.
-
-This is more predictable than the current broad text search.
-
-### 2. Keep free-text search optional, not primary
-
-The current free-text search is still useful for landmarks and flexible discovery.
-
-Recommended approach:
-
-- keep `q` as an advanced or secondary field,
-- make the structured selectors the primary experience,
-- optionally allow landmark text inside the locality field only after city selection.
-
-### 3. Keep query params shareable
-
-The selected search state should remain in the URL so users can:
-
-- refresh without losing filters,
-- share search results,
-- return to the same search later.
-
-Example target URL:
-
-`/listings?intent=rent&city=Chennai&localities=Adambakkam,Ayanavaram&property_group=pg-hostel`
-
-### D. Frontend State and Interaction Improvements
-
-### 1. Reset dependent fields correctly
-
-When city changes:
-
-- clear selected localities,
-- clear locality suggestions,
-- clear nearby-locality suggestions,
-- optionally reset property type only if business wants city-specific categories.
-
-When intent changes:
-
-- clear the currently selected property type if it is no longer valid
-- keep city only if the same city is allowed in both modes
-- keep or clear localities based on product choice, but revalidate them before search
-
-### 2. Debounce locality suggestion search
-
-- Locality suggestions should not fire on every keystroke immediately.
-- Use debouncing to reduce API calls and improve responsiveness.
-
-### 3. Handle empty and loading states well
-
-Examples:
-
-- no city selected: `Select a city first`
-- no localities found: `No matching localities in Chennai`
-- loading suggestions: spinner or `Searching...`
-
-### 4. Make the selected values visible and removable
-
-- Users should clearly see:
-  - selected city
-  - selected localities
-  - nearby recommended localities
-  - selected property type
-- Locality selections should be removable via chips/tags.
-
-### E. Data and Admin Improvements
-
-### 1. Improve listing creation inputs for location quality
-
-If owners continue entering free-form city/locality text, search suggestions will become messy.
-
-Recommended improvement:
-
-- add a controlled `buy/rent` listing type field in the listing form,
-- add controlled city and locality inputs in the listing form,
-- reuse the same canonical city/locality source used by search,
-- maintain a nearby-locality relationship source for search recommendations,
-- prevent duplicate spellings from entering the system.
-
-### 2. Add backfill and cleanup for existing listings
-
-Before launching the improved search:
-
-- audit existing city names,
-- audit existing locality names,
-- merge duplicates,
-- standardize spelling and casing,
-- reindex search data after cleanup.
-
-## Recommended Rollout Order
-
-### Phase 1: Core search behavior
-
-- add `Buy / Rent` selector
-- add city selector
-- add locality multi-select with max 3
-- show nearby-locality quick-add suggestions after the first locality is selected
-- add property type in top search bar
-- pass structured values into `/listings`
-
-### Phase 2: Backend support
-
-- add `intent` support for listings and search
-- add multi-locality filtering
-- add suggestion endpoint
-- add nearby-locality lookup or mapping
-- update Meilisearch or location lookup strategy
-
-### Phase 3: Data quality
-
-- normalize city/locality values
-- clean existing listing data
-- align owner listing form with canonical locations
-
-### Phase 4: UX polish
-
-- chips/tags for localities
-- loading, empty, and error states
-- responsive mobile version of the new search bar
-
-## Acceptance Criteria
-
-The enhancement can be considered complete when:
-
-- users can choose `Buy` or `Rent` before searching,
-- `Buy` only shows buy-relevant property options such as `Full House` and `Apartment`,
-- `Rent` shows rental-relevant property options such as `PG/Hostel`, `Full House`, and `Apartment`,
-- users must select a city before locality suggestions are shown,
-- users can select up to 3 localities,
-- each locality suggestion includes the city name,
-- after one locality is selected, nearby localities are shown as quick-add options,
-- users can choose property/house type before search,
-- search results correctly apply intent + city + multi-locality + property filters,
-- URL state is preserved,
-- existing listing data does not produce duplicate or broken suggestions.
-
-## Confirmed Product Direction
-
-Based on your clarification, the required direction is:
-
-- support both `Buy` and `Rent`
-- show different property options based on the selected mode
-- keep the guided flow as:
-  - choose `Buy` or `Rent`
-  - choose city
-  - choose up to 3 localities
-  - see nearby locality suggestions after selecting one
-  - choose property type
-  - search
-
-This means the current rental-only assumptions in the codebase should be treated as a gap that needs to be addressed in both search and listing creation.
+- code-level implementation details
+- schema or migration details
+- low-level API contracts
+- rollout or backward-compatibility strategy for existing users, since the database will be reset

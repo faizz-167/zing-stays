@@ -51,6 +51,7 @@ const updateListingSchema = listingInputSchema.partial();
 const listingsQuerySchema = z.object({
   cityId: z.coerce.number().int().positive().optional(),
   localityId: z.coerce.number().int().positive().optional(),
+  intent: z.enum(['buy', 'rent']).optional(),
   room_type: z.enum(['single', 'double', 'shared']).optional(),
   property_type: z.enum(['pg', 'hostel', 'apartment', 'flat']).optional(),
   food_included: z.enum(['true', 'false']).optional(),
@@ -197,10 +198,11 @@ router.get('/', async (req, res) => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0].message }); return;
   }
-  const { cityId, localityId, room_type, property_type, food_included, gender, price_min, price_max, page, limit } = parsed.data;
+  const { cityId, localityId, intent, room_type, property_type, food_included, gender, price_min, price_max, page, limit } = parsed.data;
   const conditions: SQL[] = [eq(listings.status, 'active')];
   if (cityId) conditions.push(eq(listings.cityId, cityId));
   if (localityId) conditions.push(eq(listings.localityId, localityId));
+  if (intent) conditions.push(eq(listings.intent, intent));
   if (room_type) conditions.push(eq(listings.roomType, room_type));
   if (property_type) conditions.push(eq(listings.propertyType, property_type));
   if (food_included === 'true') conditions.push(eq(listings.foodIncluded, true));

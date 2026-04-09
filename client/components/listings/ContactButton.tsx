@@ -24,6 +24,7 @@ export default function ContactButton({ listingId, city, locality, propertyType 
   const [showModal, setShowModal] = useState(false);
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const revealContact = async (allowAuthenticatedRequest = isAuthenticated) => {
     if (!allowAuthenticatedRequest) {
@@ -31,6 +32,7 @@ export default function ContactButton({ listingId, city, locality, propertyType 
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       const res = await api.post<ContactInfo>(`/listings/${listingId}/contact`, {});
       setContact(res);
@@ -41,6 +43,8 @@ export default function ContactButton({ listingId, city, locality, propertyType 
         property_type: propertyType,
         page_type: 'listing_detail',
       });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to retrieve contact details');
     } finally {
       setLoading(false);
     }
@@ -68,11 +72,15 @@ export default function ContactButton({ listingId, city, locality, propertyType 
       <Button size="lg" className="w-full" onClick={() => void revealContact()} disabled={loading}>
         {loading ? 'Loading...' : 'View Contact Details'}
       </Button>
-      <p className="font-sans text-xs text-muted-foreground text-center mt-2">
-        {isAuthenticated
-          ? "Click to reveal owner's phone number"
-          : 'Sign in to view contact details'}
-      </p>
+      {error ? (
+        <p className="font-sans text-xs text-red-500 text-center mt-2">{error}</p>
+      ) : (
+        <p className="font-sans text-xs text-muted-foreground text-center mt-2">
+          {isAuthenticated
+            ? "Click to reveal owner's phone number"
+            : 'Sign in to view contact details'}
+        </p>
+      )}
       {showModal && (
         <OtpModal
           onSuccess={() => {

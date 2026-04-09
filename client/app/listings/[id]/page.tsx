@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import ImageGallery from '@/components/listings/ImageGallery';
 import ContactButton from '@/components/listings/ContactButton';
+import FavoriteButton from '@/components/listings/FavoriteButton';
 import TrustBadge from '@/components/ui/TrustBadge';
 import SectionLabel from '@/components/ui/SectionLabel';
 import EMICalculator from '@/components/utilities/EMICalculator';
@@ -9,6 +10,7 @@ import RentEstimator from '@/components/utilities/RentEstimator';
 import ReviewList from '@/components/listings/ReviewList';
 import ReviewForm from '@/components/listings/ReviewForm';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 const BADGE_TYPES = ['verified_owner', 'well_detailed', 'recently_updated'] as const;
 type BadgeType = (typeof BADGE_TYPES)[number];
 
@@ -31,6 +33,7 @@ interface Listing {
   title: string;
   locality: string;
   city: string;
+  intent: 'buy' | 'rent';
   badges?: string[];
   images?: string[];
   description?: string;
@@ -48,7 +51,7 @@ interface Listing {
 
 async function getListing(id: string): Promise<Listing | null> {
   const cookieStore = await cookies();
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${id}`, {
+  const res = await fetch(`${API_URL}/listings/${id}`, {
     headers: {
       Cookie: cookieStore.toString(),
     },
@@ -68,9 +71,10 @@ export default async function ListingDetailPage({
   if (!listing) notFound();
 
   const detailRows: [string, string][] = [
+    ['Listing', listing.intent === 'buy' ? 'For Sale' : 'For Rent'],
     ['Room Type', listing.roomType],
     ['Property', listing.propertyType],
-    ['Food', listing.foodIncluded ? 'Included' : 'Not included'],
+    ...(listing.intent === 'rent' ? [['Food', listing.foodIncluded ? 'Included' : 'Not included'] as [string, string]] : []),
     [
       'Preferred for',
       listing.genderPref === 'any'
@@ -80,6 +84,8 @@ export default async function ListingDetailPage({
           : 'Females',
     ],
   ];
+
+  const priceSuffix = listing.intent === 'buy' ? '' : ' / month';
 
   return (
     <div className="max-w-content mx-auto px-6 py-12">
@@ -137,12 +143,12 @@ export default async function ListingDetailPage({
           {/* Reviews section */}
           <div className="mt-10">
             <SectionLabel>Reviews</SectionLabel>
-            <ReviewList listingId={listing.id} apiBase={process.env.NEXT_PUBLIC_API_URL} />
+            <ReviewList listingId={listing.id} apiBase={API_URL} />
           </div>
 
           {listing.hasContacted && (
             <div className="mt-6">
-              <ReviewForm listingId={listing.id} apiBase={process.env.NEXT_PUBLIC_API_URL} />
+              <ReviewForm listingId={listing.id} apiBase={API_URL} />
             </div>
           )}
         </div>
@@ -155,7 +161,7 @@ export default async function ListingDetailPage({
                 <span className="font-display text-4xl text-accent">
                   &#8377;{listing.price.toLocaleString('en-IN')}
                 </span>
-                <span className="font-sans text-sm text-muted-foreground"> / month</span>
+                {priceSuffix && <span className="font-sans text-sm text-muted-foreground">{priceSuffix}</span>}
               </div>
               <div className="space-y-3 mb-6">
                 {detailRows.map(([label, value]) => (
@@ -170,6 +176,13 @@ export default async function ListingDetailPage({
                   </div>
                 ))}
               </div>
+              <div className="mb-4">
+                <FavoriteButton
+                  listingId={listing.id}
+                  city={listing.city}
+                  locality={listing.locality}
+                />
+              </div>
               <ContactButton
                 listingId={listing.id}
                 city={listing.city}
@@ -182,10 +195,10 @@ export default async function ListingDetailPage({
                 Listed by {listing.ownerName}
               </p>
             )}
-            {listing.localityId && (
-              <RentEstimator localityId={listing.localityId} apiBase={process.env.NEXT_PUBLIC_API_URL} />
+            {listing.intent === 'rent' && listing.localityId && (
+              <RentEstimator localityId={listing.localityId} apiBase={API_URL} />
             )}
-            <EMICalculator defaultPrincipal={listing.price * 12} />
+            <EMICalculator defaultPrincipal={listing.intent === 'buy' ? listing.price : listing.price * 12} />
           </div>
         </div>
       </div>

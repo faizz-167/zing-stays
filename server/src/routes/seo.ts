@@ -13,6 +13,7 @@ interface ListingCard {
   title: string;
   city: string;
   locality: string;
+  intent: 'buy' | 'rent';
   price: number;
   propertyType: string;
   roomType: string;
@@ -37,7 +38,7 @@ router.get('/top-params', async (_req, res) => {
       .from(listings)
       .innerJoin(cities, eq(listings.cityId, cities.id))
       .innerJoin(localities, eq(listings.localityId, localities.id))
-      .where(eq(listings.status, 'active'))
+      .where(and(eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .groupBy(cities.slug, localities.slug)
       .orderBy(desc(count(listings.id)))
       .limit(100);
@@ -80,7 +81,7 @@ router.get('/city/:slug', async (req, res) => {
         maxPrice: max(listings.price),
       })
       .from(listings)
-      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active')));
+      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')));
 
     const topListings = await db
       .select({
@@ -88,6 +89,7 @@ router.get('/city/:slug', async (req, res) => {
         title: listings.title,
         city: cities.name,
         locality: localities.name,
+        intent: listings.intent,
         price: listings.price,
         propertyType: listings.propertyType,
         roomType: listings.roomType,
@@ -97,7 +99,7 @@ router.get('/city/:slug', async (req, res) => {
       .from(listings)
       .innerJoin(cities, eq(listings.cityId, cities.id))
       .innerJoin(localities, eq(listings.localityId, localities.id))
-      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active')))
+      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .orderBy(desc(listings.createdAt))
       .limit(12);
 
@@ -109,7 +111,7 @@ router.get('/city/:slug', async (req, res) => {
         listingCount: count(listings.id),
       })
       .from(localities)
-      .leftJoin(listings, and(eq(listings.localityId, localities.id), eq(listings.status, 'active')))
+      .leftJoin(listings, and(eq(listings.localityId, localities.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .where(eq(localities.cityId, city.id))
       .groupBy(localities.id, localities.name, localities.slug)
       .orderBy(desc(count(listings.id)))
@@ -121,7 +123,7 @@ router.get('/city/:slug', async (req, res) => {
         count: count(listings.id),
       })
       .from(listings)
-      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active')))
+      .where(and(eq(listings.cityId, city.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .groupBy(listings.propertyType)
       .orderBy(desc(count(listings.id)));
 
@@ -192,7 +194,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
         maxPrice: max(listings.price),
       })
       .from(listings)
-      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active')));
+      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')));
 
     const topListings = await db
       .select({
@@ -200,6 +202,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
         title: listings.title,
         city: cities.name,
         locality: localities.name,
+        intent: listings.intent,
         price: listings.price,
         propertyType: listings.propertyType,
         roomType: listings.roomType,
@@ -209,7 +212,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
       .from(listings)
       .innerJoin(cities, eq(listings.cityId, cities.id))
       .innerJoin(localities, eq(listings.localityId, localities.id))
-      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active')))
+      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .orderBy(desc(listings.createdAt))
       .limit(12);
 
@@ -219,7 +222,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
         count: count(listings.id),
       })
       .from(listings)
-      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active')))
+      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .groupBy(listings.propertyType)
       .orderBy(desc(count(listings.id)));
 
@@ -231,7 +234,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
         listingCount: count(listings.id),
       })
       .from(localities)
-      .leftJoin(listings, and(eq(listings.localityId, localities.id), eq(listings.status, 'active')))
+      .leftJoin(listings, and(eq(listings.localityId, localities.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .where(and(eq(localities.cityId, city.id), sql`${localities.id} != ${locality.id}`))
       .groupBy(localities.id, localities.name, localities.slug)
       .orderBy(desc(count(listings.id)))
@@ -316,6 +319,7 @@ router.get('/locality/:citySlug/:localitySlug/:type', async (req, res) => {
         and(
           eq(listings.localityId, locality.id),
           eq(listings.status, 'active'),
+          eq(listings.intent, 'rent'),
           eq(listings.propertyType, propertyType),
         ),
       );
@@ -326,6 +330,7 @@ router.get('/locality/:citySlug/:localitySlug/:type', async (req, res) => {
         title: listings.title,
         city: cities.name,
         locality: localities.name,
+        intent: listings.intent,
         price: listings.price,
         propertyType: listings.propertyType,
         roomType: listings.roomType,
@@ -339,6 +344,7 @@ router.get('/locality/:citySlug/:localitySlug/:type', async (req, res) => {
         and(
           eq(listings.localityId, locality.id),
           eq(listings.status, 'active'),
+          eq(listings.intent, 'rent'),
           eq(listings.propertyType, propertyType),
         ),
       )
@@ -348,7 +354,7 @@ router.get('/locality/:citySlug/:localitySlug/:type', async (req, res) => {
     const otherTypes = await db
       .select({ type: listings.propertyType })
       .from(listings)
-      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active')))
+      .where(and(eq(listings.localityId, locality.id), eq(listings.status, 'active'), eq(listings.intent, 'rent')))
       .groupBy(listings.propertyType);
 
     const relatedTypes = otherTypes
@@ -438,6 +444,7 @@ router.get('/locality/:citySlug/:localitySlug/budget/:band', async (req, res) =>
         and(
           eq(listings.localityId, locality.id),
           eq(listings.status, 'active'),
+          eq(listings.intent, 'rent'),
           lte(listings.price, maxPrice),
         ),
       );
@@ -448,6 +455,7 @@ router.get('/locality/:citySlug/:localitySlug/budget/:band', async (req, res) =>
         title: listings.title,
         city: cities.name,
         locality: localities.name,
+        intent: listings.intent,
         price: listings.price,
         propertyType: listings.propertyType,
         roomType: listings.roomType,
@@ -461,6 +469,7 @@ router.get('/locality/:citySlug/:localitySlug/budget/:band', async (req, res) =>
         and(
           eq(listings.localityId, locality.id),
           eq(listings.status, 'active'),
+          eq(listings.intent, 'rent'),
           lte(listings.price, maxPrice),
         ),
       )

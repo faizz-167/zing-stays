@@ -46,7 +46,8 @@ export default function MyListingsPage() {
               <div className="flex-1">
                 <h3 className="font-display text-lg mb-1">{l.title}</h3>
                 <p className="font-mono text-xs text-muted-foreground uppercase tracking-wide mb-4">
-                  {l.locality}, {l.city} · ₹{l.price.toLocaleString('en-IN')}/mo
+                  {l.locality}, {l.city} · ₹{l.price.toLocaleString('en-IN')}
+                  {l.intent === 'rent' ? '/mo' : ''} · {l.intent === 'buy' ? 'for sale' : 'for rent'}
                 </p>
                 <CompletenessBar score={l.completenessScore} />
               </div>

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "test": "npm run build && node dist/__tests__/run.js",
     "start": "node dist/index.js",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

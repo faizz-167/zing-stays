@@ -33,6 +33,7 @@ export function useSearch(filters: SearchFilters) {
         title: hit.title,
         city: hit.city,
         locality: hit.locality,
+        intent: hit.intent,
         price: hit.price,
         roomType: hit.room_type,
         propertyType: hit.property_type,

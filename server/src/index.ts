@@ -3,10 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import { sql } from 'drizzle-orm';
 
 dotenv.config();
 
+import { db } from './db';
+import { redis } from './lib/redis';
 import { setupSearchIndex, reindexAllListings } from './services/search';
+import { searchClient } from './services/search';
 import './workers/searchIndexWorker';
 import './workers/moderationWorker';
 import { schedulePriceSnapshots } from './workers/priceSnapshotWorker';
@@ -25,6 +29,50 @@ import contentRoutes from './routes/content';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+type DependencyStatus = 'up' | 'down' | 'unknown';
+
+const dependencyStatus: Record<'database' | 'redis' | 'search', DependencyStatus> = {
+  database: 'unknown',
+  redis: 'unknown',
+  search: 'unknown',
+};
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
+async function checkDatabaseConnection(): Promise<void> {
+  await withTimeout(db.execute(sql`select 1`), 5000, 'Database connection');
+  dependencyStatus.database = 'up';
+}
+
+async function checkRedisConnection(): Promise<void> {
+  if (redis.status === 'wait') {
+    await redis.connect();
+  }
+
+  await withTimeout(redis.ping(), 5000, 'Redis connection');
+  dependencyStatus.redis = 'up';
+}
+
+async function checkSearchConnection(): Promise<void> {
+  await withTimeout(searchClient.health(), 5000, 'Meilisearch connection');
+  dependencyStatus.search = 'up';
+}
+
 app.use(helmet());
 app.use(cookieParser());
 app.use(cors({
@@ -32,6 +80,10 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+// Trust the first proxy hop so req.ip reflects the real client IP.
+// Adjust the number to match the actual number of reverse-proxy hops
+// (e.g., nginx → this server = 1).
+app.set('trust proxy', 1);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
@@ -45,26 +97,66 @@ app.use('/api/utilities', utilitiesRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/content', contentRoutes);
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_req, res) => {
+  const overallStatus =
+    dependencyStatus.database !== 'up'
+      ? 'error'
+      : Object.values(dependencyStatus).every((status) => status === 'up')
+        ? 'ok'
+        : 'degraded';
+
+  res.status(overallStatus === 'error' ? 503 : 200).json({
+    status: overallStatus,
+    dependencies: dependencyStatus,
+  });
+});
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-setupSearchIndex()
-  .then(() => reindexAllListings())
-  .catch(console.error);
+async function bootstrap(): Promise<void> {
+  try {
+    await checkDatabaseConnection();
+  } catch (err) {
+    dependencyStatus.database = 'down';
+    console.error('Database connection check failed:', err);
+    process.exit(1);
+  }
 
-schedulePriceSnapshots().catch(console.error);
+  try {
+    await checkRedisConnection();
+  } catch (err) {
+    dependencyStatus.redis = 'down';
+    console.error('Redis connection check failed:', err);
+  }
 
-const server = app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
-);
+  try {
+    await checkSearchConnection();
+    await setupSearchIndex();
+    await reindexAllListings();
+  } catch (err) {
+    dependencyStatus.search = 'down';
+    console.error('Search initialization failed:', err);
+  }
 
-server.on('error', (err: NodeJS.ErrnoException) => {
-  console.error('Failed to start server:', err.message);
-  process.exit(1);
-});
+  if (dependencyStatus.redis === 'up') {
+    schedulePriceSnapshots().catch((err) => {
+      console.error('Price snapshot scheduling failed:', err);
+    });
+  }
+
+  const server = app.listen(PORT, () =>
+    console.log(`Server running on port ${PORT}`)
+  );
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  });
+}
+
+void bootstrap();
 
 export default app;

@@ -18,6 +18,12 @@ const PROPERTY_TYPES = [
   { value: 'flat', label: 'Flat' },
 ];
 
+const INTENT_OPTIONS = [
+  { value: '', label: 'All Listings' },
+  { value: 'rent', label: 'For Rent' },
+  { value: 'buy', label: 'For Sale' },
+];
+
 export default function ListingFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,7 +39,30 @@ export default function ListingFilters() {
     <aside className="w-full md:w-64 space-y-6">
       <div>
         <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
-          Price Range (₹/mo)
+          Listing Intent
+        </label>
+        <div className="space-y-1">
+          {INTENT_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleChange('intent', value)}
+              className={`w-full text-left px-3 py-2 rounded font-sans text-sm transition-colors ${
+                searchParams.get('intent') === value ||
+                (!searchParams.get('intent') && !value)
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
+          Price Range (₹)
         </label>
         <div className="flex gap-2">
           <Input
@@ -61,6 +90,7 @@ export default function ListingFilters() {
           {ROOM_TYPES.map(({ value, label }) => (
             <button
               key={value}
+              type="button"
               onClick={() => handleChange('room_type', value)}
               className={`w-full text-left px-3 py-2 rounded font-sans text-sm transition-colors ${
                 searchParams.get('room_type') === value ||
@@ -83,6 +113,7 @@ export default function ListingFilters() {
           {PROPERTY_TYPES.map(({ value, label }) => (
             <button
               key={value}
+              type="button"
               onClick={() => handleChange('property_type', value)}
               className={`w-full text-left px-3 py-2 rounded font-sans text-sm transition-colors ${
                 searchParams.get('property_type') === value || (!searchParams.get('property_type') && !value)
@@ -108,6 +139,7 @@ export default function ListingFilters() {
           ].map(({ value, label }) => (
             <button
               key={value}
+              type="button"
               onClick={() => handleChange('gender', value)}
               className={`w-full text-left px-3 py-2 rounded font-sans text-sm transition-colors ${
                 searchParams.get('gender') === value

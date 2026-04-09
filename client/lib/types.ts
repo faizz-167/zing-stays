@@ -5,7 +5,7 @@ export interface ListingCardData {
   locality: string;
   cityId?: number | null;
   localityId?: number | null;
-  intent?: 'buy' | 'rent';
+  intent: 'buy' | 'rent';
   price: number;
   roomType: string;
   propertyType: string;
@@ -19,6 +19,7 @@ export interface SearchListingHit {
   title: string;
   city: string;
   locality: string;
+  intent: 'buy' | 'rent';
   price: number;
   room_type: string;
   property_type: string;

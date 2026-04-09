@@ -19,7 +19,7 @@ export default function FavoritesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {listings.map((l: ListingCardData) => (
-            <ListingCard key={l.id} listing={{ ...l, badges: [] }} />
+            <ListingCard key={l.id} listing={l} />
           ))}
         </div>
       )}

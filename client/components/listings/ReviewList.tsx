@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface Review {
   id: number;
@@ -34,34 +34,19 @@ interface ReviewListProps {
 }
 
 export default function ReviewList({ listingId, apiBase = '/api', refreshKey = 0 }: ReviewListProps) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: reviews = [], isLoading, isError } = useQuery({
+    queryKey: ['reviews', apiBase, listingId, refreshKey],
+    queryFn: async () => {
+      const response = await fetch(`${apiBase}/reviews/${listingId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+      return response.json() as Promise<Review[]>;
+    },
+  });
 
-    fetch(`${apiBase}/reviews/${listingId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<Review[]>;
-      })
-      .then((data) => {
-        if (!cancelled) setReviews(data);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load reviews');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [listingId, apiBase, refreshKey]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         {[1, 2].map((i) => (
@@ -74,7 +59,7 @@ export default function ReviewList({ listingId, apiBase = '/api', refreshKey = 0
     );
   }
 
-  if (error) {
+  if (isError) {
     return <p className="text-sm text-gray-400">Could not load reviews.</p>;
   }
 

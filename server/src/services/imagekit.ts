@@ -10,6 +10,6 @@ if (!publicKey || !privateKey || !urlEndpoint) {
 
 export const imagekit = new ImageKit({ publicKey, privateKey, urlEndpoint });
 
-export function getAuthParams() {
-  return imagekit.getAuthenticationParameters();
+export function getAuthParams(token?: string, expire?: number) {
+  return imagekit.getAuthenticationParameters(token, expire);
 }

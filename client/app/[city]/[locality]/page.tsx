@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import LocalityLinks from '@/components/seo/LocalityLinks';
@@ -12,8 +13,8 @@ import PriceTrends from '@/components/utilities/PriceTrends';
 
 export const revalidate = 3600;
 
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const POSTHOG_API_HOST = process.env.POSTHOG_API_HOST ?? 'https://app.posthog.com';
 
 interface NearbyLocality {
   id: number;
@@ -34,14 +35,30 @@ interface GuideSummary {
   type: string;
 }
 
+interface LocalityStats {
+  totalListings: number;
+  avgPrice: number;
+  minPrice: number;
+  maxPrice: number;
+}
+
 interface LocalityPageData {
   city: { id: number; name: string; slug: string };
   locality: { id: number; name: string; slug: string };
-  stats: { totalListings: number; avgPrice: number; minPrice: number; maxPrice: number };
+  stats: LocalityStats;
   listings: (ListingCardData & { foodIncluded: boolean })[];
   propertyTypes: PropertyTypeStat[];
   nearbyLocalities: NearbyLocality[];
   meta: { title: string; description: string };
+}
+
+/**
+ * Serialize structured data for an inline <script type="application/ld+json">.
+ * JSON.stringify alone is insufficient — a string value containing </script>
+ * would close the script element and allow arbitrary HTML injection (XSS).
+ */
+function safeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/<\/script>/gi, '<\\/script>');
 }
 
 async function getCityGuides(cityId: number): Promise<GuideSummary[]> {
@@ -70,11 +87,9 @@ async function getLocalityData(
 export async function generateStaticParams(): Promise<{ city: string; locality: string }[]> {
   const posthogKey = process.env.POSTHOG_PERSONAL_API_KEY;
   const projectId = process.env.POSTHOG_PROJECT_ID;
-  const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
 
   if (posthogKey && projectId) {
     try {
-      // Prefer explicit slug properties captured with the event payload.
       const query = `
         SELECT
           properties.city_slug AS city_slug,
@@ -90,7 +105,7 @@ export async function generateStaticParams(): Promise<{ city: string; locality: 
         LIMIT 100
       `;
 
-      const res = await fetch(`${posthogHost}/api/projects/${projectId}/query`, {
+      const res = await fetch(`${POSTHOG_API_HOST}/api/projects/${projectId}/query`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${posthogKey}`,
@@ -111,7 +126,6 @@ export async function generateStaticParams(): Promise<{ city: string; locality: 
     }
   }
 
-  // Fallback: top city/locality combinations by active listing count
   try {
     const res = await fetch(`${API_URL}/seo/top-params`);
     if (!res.ok) return [];
@@ -143,6 +157,108 @@ export async function generateMetadata({
   };
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components (all server-safe — no client hooks)
+// ---------------------------------------------------------------------------
+
+function StatsBar({ stats, cityName, localityName }: { stats: LocalityStats; cityName: string; localityName: string }) {
+  if (stats.totalListings === 0) return null;
+  return (
+    <div>
+      <h1 className="font-display text-4xl leading-tight mb-4">
+        Rooms & PG in {localityName}, {cityName}
+      </h1>
+      <div className="flex flex-wrap gap-6 font-sans text-sm text-muted-foreground">
+        <span>{stats.totalListings} listings</span>
+        {stats.avgPrice > 0 && (
+          <span>Avg ₹{stats.avgPrice.toLocaleString('en-IN')}/mo</span>
+        )}
+        {stats.minPrice > 0 && (
+          <span>
+            ₹{stats.minPrice.toLocaleString('en-IN')} – ₹{stats.maxPrice.toLocaleString('en-IN')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ListingsSection({
+  listings,
+  localityName,
+  cityName,
+}: {
+  listings: ListingCardData[];
+  localityName: string;
+  cityName: string;
+}) {
+  if (listings.length === 0) {
+    return (
+      <p className="font-sans text-muted-foreground">No active listings in {localityName} yet.</p>
+    );
+  }
+  return (
+    <div>
+      <h2 className="font-display text-2xl mb-6">Latest Listings in {localityName}</h2>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {listings.map((l) => (
+          <SeoListingCard
+            key={l.id}
+            listing={l}
+            city={cityName}
+            locality={localityName}
+            pageType="seo_locality"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GuidesSection({ guides, cityName }: { guides: GuideSummary[]; cityName: string }) {
+  if (guides.length === 0) return null;
+  return (
+    <div>
+      <h2 className="font-display text-xl mb-4">Guides for {cityName}</h2>
+      <div className="flex flex-wrap gap-3">
+        {guides.map((guide) => (
+          <Link
+            key={guide.id}
+            href={`/guides/${guide.slug}`}
+            className="rounded-lg border border-border px-4 py-2 font-sans text-sm hover:border-accent hover:text-accent transition-colors"
+          >
+            {guide.title}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WidgetsSection({
+  localityId,
+  avgPrice,
+}: {
+  localityId: number;
+  avgPrice: number;
+}) {
+  return (
+    <div className="grid lg:grid-cols-3 gap-6 items-start">
+      <RentEstimator localityId={localityId} apiBase={API_URL} />
+      <PriceTrends localityId={localityId} apiBase={API_URL} />
+      {avgPrice > 0 && (
+        <div className="lg:sticky lg:top-24">
+          <EMICalculator defaultPrincipal={avgPrice * 12} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default async function LocalityPage({
   params,
 }: {
@@ -155,10 +271,7 @@ export default async function LocalityPage({
   const { city, locality, stats, listings, propertyTypes, nearbyLocalities } = data;
   const guides = await getCityGuides(city.id);
 
-  const listingCards: ListingCardData[] = listings.map((l) => ({
-    ...l,
-    badges: [],
-  }));
+  const listingCards: ListingCardData[] = listings.map((l) => ({ ...l, badges: [] }));
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -177,7 +290,7 @@ export default async function LocalityPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <SeoPageTracker
         city={city.name}
@@ -187,37 +300,16 @@ export default async function LocalityPage({
         pageType="seo_locality"
       />
       <div className="max-w-content mx-auto px-6 py-12 space-y-12">
-        {/* Breadcrumb */}
         <nav className="font-mono text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-          <a href={`/${city.slug}`} className="hover:text-foreground transition-colors">
+          <Link href={`/${city.slug}`} className="hover:text-foreground transition-colors">
             {city.name}
-          </a>
+          </Link>
           <span>/</span>
           <span>{locality.name}</span>
         </nav>
 
-        {/* Header */}
-        <div>
-          <h1 className="font-display text-4xl leading-tight mb-4">
-            Rooms & PG in {locality.name}, {city.name}
-          </h1>
-          {stats.totalListings > 0 && (
-            <div className="flex flex-wrap gap-6 font-sans text-sm text-muted-foreground">
-              <span>{stats.totalListings} listings</span>
-              {stats.avgPrice > 0 && (
-                <span>Avg ₹{stats.avgPrice.toLocaleString('en-IN')}/mo</span>
-              )}
-              {stats.minPrice > 0 && (
-                <span>
-                  ₹{stats.minPrice.toLocaleString('en-IN')} – ₹
-                  {stats.maxPrice.toLocaleString('en-IN')}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        <StatsBar stats={stats} cityName={city.name} localityName={locality.name} />
 
-        {/* Property type links */}
         {propertyTypes.length > 0 && (
           <PropertyTypeLinks
             citySlug={city.slug}
@@ -226,31 +318,8 @@ export default async function LocalityPage({
           />
         )}
 
-        {/* Listings grid */}
-        {listingCards.length > 0 ? (
-          <div>
-            <h2 className="font-display text-2xl mb-6">
-              Latest Listings in {locality.name}
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listingCards.map((l) => (
-                <SeoListingCard
-                  key={l.id}
-                  listing={l}
-                  city={city.name}
-                  locality={locality.name}
-                  pageType="seo_locality"
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="font-sans text-muted-foreground">
-            No active listings in {locality.name} yet.
-          </p>
-        )}
+        <ListingsSection listings={listingCards} localityName={locality.name} cityName={city.name} />
 
-        {/* Budget bands */}
         {stats.minPrice > 0 && (
           <BudgetBandLinks
             cityId={city.id}
@@ -262,36 +331,10 @@ export default async function LocalityPage({
           />
         )}
 
-        {/* Area guides */}
-        {guides.length > 0 && (
-          <div>
-            <h2 className="font-display text-xl mb-4">Guides for {city.name}</h2>
-            <div className="flex flex-wrap gap-3">
-              {guides.map((guide) => (
-                <a
-                  key={guide.id}
-                  href={`/guides/${guide.slug}`}
-                  className="rounded-lg border border-border px-4 py-2 font-sans text-sm hover:border-accent hover:text-accent transition-colors"
-                >
-                  {guide.title}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
+        <GuidesSection guides={guides} cityName={city.name} />
 
-        {/* Utility widgets */}
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
-          <RentEstimator localityId={locality.id} apiBase={API_URL} />
-          <PriceTrends localityId={locality.id} apiBase={API_URL} />
-          {stats.avgPrice > 0 && (
-            <div className="lg:sticky lg:top-24">
-              <EMICalculator defaultPrincipal={stats.avgPrice * 12} />
-            </div>
-          )}
-        </div>
+        <WidgetsSection localityId={locality.id} avgPrice={stats.avgPrice} />
 
-        {/* Nearby localities */}
         {nearbyLocalities.length > 0 && (
           <LocalityLinks citySlug={city.slug} localities={nearbyLocalities} />
         )}

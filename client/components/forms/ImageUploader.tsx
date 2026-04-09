@@ -3,11 +3,22 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { api } from '@/lib/api';
 
-async function uploadToImageKit(file: File, authParams: { signature: string; expire: string; token: string }): Promise<string> {
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+interface ImageUploadAuth {
+  signature: string;
+  expire: string;
+  token: string;
+  folder: string;
+  fileName: string;
+}
+
+async function uploadToImageKit(file: File, authParams: ImageUploadAuth): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('fileName', `listing-${Date.now()}-${file.name}`);
-  formData.append('folder', '/listings');
+  formData.append('fileName', authParams.fileName);
+  formData.append('folder', authParams.folder);
   formData.append('publicKey', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!);
   formData.append('signature', authParams.signature);
   formData.append('expire', authParams.expire);
@@ -28,14 +39,45 @@ interface ImageUploaderProps {
 
 export default function ImageUploader({ images, onChange }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList) => {
+    const selectedFiles = Array.from(files);
+    const nextCount = images.length + selectedFiles.length;
+
+    if (nextCount > 12) {
+      setError('A listing can include up to 12 images.');
+      return;
+    }
+
+    const invalidFile = selectedFiles.find(
+      (file) => !ALLOWED_CONTENT_TYPES.has(file.type) || file.size > MAX_IMAGE_SIZE_BYTES,
+    );
+    if (invalidFile) {
+      setError('Only JPG, PNG, and WebP images up to 8 MB are allowed.');
+      return;
+    }
+
     setUploading(true);
+    setError(null);
     try {
-      const authParams = await api.get<{ signature: string; expire: string; token: string }>('/images/auth');
-      const urls = await Promise.all(Array.from(files).map(f => uploadToImageKit(f, authParams)));
+      const urls = await Promise.all(selectedFiles.map(async (file, index) => {
+        const authParams = await api.post<ImageUploadAuth>('/images/auth', {
+          originalFileName: file.name,
+          contentType: file.type,
+          size: file.size,
+          existingImageCount: images.length + index,
+        });
+
+        return uploadToImageKit(file, authParams);
+      }));
       onChange([...images, ...urls]);
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -82,6 +124,7 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
         className="hidden"
         onChange={e => e.target.files && handleFiles(e.target.files)}
       />
+      {error && <p className="font-sans text-xs text-red-600">{error}</p>}
       <p className="font-sans text-xs text-muted-foreground">Add at least 3 photos for higher ranking. Supported: JPG, PNG, WebP.</p>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   LineChart,
   Line,
@@ -44,34 +44,19 @@ interface PriceTrendsProps {
 }
 
 export default function PriceTrends({ localityId, apiBase = '/api' }: PriceTrendsProps) {
-  const [data, setData] = useState<PriceTrendData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['price-trends', apiBase, localityId],
+    queryFn: async () => {
+      const response = await fetch(`${apiBase}/utilities/price-trends/${localityId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+      return response.json() as Promise<PriceTrendData>;
+    },
+  });
 
-    fetch(`${apiBase}/utilities/price-trends/${localityId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<PriceTrendData>;
-      })
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [localityId, apiBase]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
@@ -80,7 +65,7 @@ export default function PriceTrends({ localityId, apiBase = '/api' }: PriceTrend
     );
   }
 
-  if (error || !data || data.trend.length === 0) {
+  if (isError || !data || data.trend.length === 0) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-400">Price trend data unavailable for this area.</p>

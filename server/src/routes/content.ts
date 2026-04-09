@@ -1,8 +1,9 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import { Router } from 'express';
 import { db } from '../db';
 import { contentPages, cities, localities } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { requireAuth, type AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAdmin, type AuthRequest } from '../middleware/auth';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -18,15 +19,6 @@ const contentPageSchema = z.object({
 });
 
 const updateContentPageSchema = contentPageSchema.partial();
-
-function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const authReq = req as AuthRequest;
-  if (!authReq.user?.isAdmin) {
-    res.status(403).json({ error: 'Admin access required' });
-    return;
-  }
-  next();
-}
 
 // ---------------------------------------------------------------------------
 // Admin endpoints — declared BEFORE /:slug to prevent 'admin' matching as slug
@@ -52,7 +44,7 @@ router.get('/admin', requireAuth, requireAdmin, async (_req, res) => {
 
     res.json(pages);
   } catch (err) {
-    console.error('admin content list error:', err);
+    logger.error('admin content list error', err);
     res.status(500).json({ error: 'Failed to list content pages' });
   }
 });
@@ -72,7 +64,7 @@ router.get('/admin/:id', requireAuth, requireAdmin, async (req, res) => {
     if (!page) { res.status(404).json({ error: 'Page not found' }); return; }
     res.json(page);
   } catch (err) {
-    console.error('admin content get error:', err);
+    logger.error('admin content get error', err);
     res.status(500).json({ error: 'Failed to fetch content page' });
   }
 });
@@ -104,7 +96,7 @@ router.get('/', async (req, res) => {
 
     res.json(pages);
   } catch (err) {
-    console.error('content list error:', err);
+    logger.error('content list error', err);
     res.status(500).json({ error: 'Failed to list content pages' });
   }
 });
@@ -141,7 +133,7 @@ router.get('/:slug', async (req, res) => {
     }
     res.json(page);
   } catch (err) {
-    console.error('content get error:', err);
+    logger.error('content get error', err);
     res.status(500).json({ error: 'Failed to fetch content page' });
   }
 });
@@ -172,7 +164,7 @@ router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
       res.status(409).json({ error: 'A page with this slug already exists.' });
       return;
     }
-    console.error('content create error:', err);
+    logger.error('content create error', err);
     res.status(500).json({ error: 'Failed to create content page' });
   }
 });
@@ -207,7 +199,7 @@ router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
       .returning();
     res.json(page);
   } catch (err) {
-    console.error('content update error:', err);
+    logger.error('content update error', err);
     res.status(500).json({ error: 'Failed to update content page' });
   }
 });
@@ -226,7 +218,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) =
     await db.delete(contentPages).where(eq(contentPages.id, id));
     res.json({ message: 'Page deleted' });
   } catch (err) {
-    console.error('content delete error:', err);
+    logger.error('content delete error', err);
     res.status(500).json({ error: 'Failed to delete content page' });
   }
 });

@@ -17,6 +17,8 @@ interface ListingCardProps {
 
 export default function ListingCard({ listing }: ListingCardProps) {
   const thumb = listing.images[0] ?? null;
+  const priceSuffix = listing.intent === 'buy' ? '' : '/mo';
+  const propertyLabel = listing.intent === 'buy' ? 'For Sale' : 'For Rent';
 
   return (
     <Link href={`/listings/${listing.id}`}>
@@ -43,7 +45,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
             <h3 className="font-display text-lg leading-tight line-clamp-2">{listing.title}</h3>
             <span className="font-display text-xl text-accent flex-shrink-0">
               ₹{listing.price.toLocaleString('en-IN')}
-              <span className="font-sans text-xs text-muted-foreground">/mo</span>
+              {priceSuffix && <span className="font-sans text-xs text-muted-foreground">{priceSuffix}</span>}
             </span>
           </div>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-wide mb-3">
@@ -55,6 +57,9 @@ export default function ListingCard({ listing }: ListingCardProps) {
             </span>
             <span className="font-mono text-xs px-2 py-0.5 bg-muted border border-border rounded uppercase tracking-wide">
               {listing.propertyType}
+            </span>
+            <span className="font-mono text-xs px-2 py-0.5 bg-muted border border-border rounded uppercase tracking-wide">
+              {propertyLabel}
             </span>
             {listing.foodIncluded && (
               <span className="font-mono text-xs px-2 py-0.5 bg-muted border border-border rounded uppercase tracking-wide">

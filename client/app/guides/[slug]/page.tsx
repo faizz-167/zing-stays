@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import type { ListingCardData } from '@/lib/types';
@@ -63,6 +64,15 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * Serialize an object to a JSON string safe for inline <script> tags.
+ * JSON.stringify alone is not safe — a value containing </script> would
+ * terminate the script block and allow arbitrary HTML injection.
+ */
+function safeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/<\/script>/gi, '<\\/script>');
+}
+
 /** Escape HTML entities so raw user content can never inject tags. */
 function escapeHtml(str: string): string {
   return str
@@ -119,30 +129,30 @@ export default async function GuidePage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Breadcrumb */}
         {(page.cityName || page.localityName) && (
           <nav className="font-mono text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-6">
-            <a href="/" className="hover:text-foreground transition-colors">Home</a>
+            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
             {page.citySlug && page.cityName && (
               <>
                 <span>/</span>
-                <a href={`/${page.citySlug}`} className="hover:text-foreground transition-colors">
+                <Link href={`/${page.citySlug}`} className="hover:text-foreground transition-colors">
                   {page.cityName}
-                </a>
+                </Link>
               </>
             )}
             {page.citySlug && page.localitySlug && page.localityName && (
               <>
                 <span>/</span>
-                <a
+                <Link
                   href={`/${page.citySlug}/${page.localitySlug}`}
                   className="hover:text-foreground transition-colors"
                 >
                   {page.localityName}
-                </a>
+                </Link>
               </>
             )}
             <span>/</span>
@@ -192,12 +202,12 @@ export default async function GuidePage({
             </div>
             {page.citySlug && page.localitySlug && (
               <div className="mt-6">
-                <a
+                <Link
                   href={`/${page.citySlug}/${page.localitySlug}`}
                   className="font-sans text-sm text-accent hover:underline"
                 >
                   See all listings in {page.localityName} →
-                </a>
+                </Link>
               </div>
             )}
           </div>

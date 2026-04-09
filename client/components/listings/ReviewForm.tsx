@@ -87,7 +87,7 @@ export default function ReviewForm({ listingId, apiBase = '/api', onSubmitted }:
         setSubmitting(false);
       }
     },
-    [rating, body, listingId, apiBase, onSubmitted],
+    [rating, body, listingId, apiBase, onSubmitted, posthog],
   );
 
   if (submitted) {

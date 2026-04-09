@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { db } from '../db';
 import { reviews, contactLeads, users, listings } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { requireAuth, type AuthRequest } from '../middleware/auth';
+import { requireAuth, requireAdmin, type AuthRequest } from '../middleware/auth';
+import { reviewPostLimiter } from '../middleware/rateLimit';
 import { moderationQueue } from '../lib/queues';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -15,7 +17,7 @@ const createReviewSchema = z.object({
 });
 
 // POST /api/reviews — contact-gated, auth required
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, reviewPostLimiter, async (req: AuthRequest, res) => {
   const result = createReviewSchema.safeParse(req.body);
   if (!result.success) {
     res.status(400).json({ error: result.error.issues[0].message });
@@ -44,7 +46,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       .returning();
 
     moderationQueue.add('moderate-review', { reviewId: review.id }).catch(
-      (err) => console.error('moderationQueue add error:', err),
+      (err) => logger.error('moderationQueue add error', err),
     );
 
     res.status(201).json(review);
@@ -54,16 +56,14 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       res.status(409).json({ error: 'You have already reviewed this listing.' });
       return;
     }
-    console.error('create review error:', err);
+    logger.error('create review error', err);
     res.status(500).json({ error: 'Failed to submit review' });
   }
 });
 
 // GET /api/reviews/admin — admin: list reviews by status
 // NOTE: must be declared before /:listingId to avoid /admin being captured as a listingId
-router.get('/admin', requireAuth, async (req: AuthRequest, res) => {
-  if (!req.user?.isAdmin) { res.status(403).json({ error: 'Admin access required' }); return; }
-
+router.get('/admin', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   const status = (req.query.status as string) ?? 'pending';
   const validStatuses = ['pending', 'approved', 'rejected'];
   if (!validStatuses.includes(status)) {
@@ -89,7 +89,7 @@ router.get('/admin', requireAuth, async (req: AuthRequest, res) => {
       .orderBy(reviews.createdAt);
     res.json(rows);
   } catch (err) {
-    console.error('admin get reviews error:', err);
+    logger.error('admin get reviews error', err);
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -123,15 +123,13 @@ router.get('/:listingId', async (req, res) => {
 
     res.json(sanitized);
   } catch (err) {
-    console.error('get reviews error:', err);
+    logger.error('get reviews error', err);
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
 
 // PATCH /api/reviews/:id — admin: update review status
-router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
-  if (!req.user?.isAdmin) { res.status(403).json({ error: 'Admin access required' }); return; }
-
+router.patch('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
 
@@ -150,7 +148,7 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res) => {
     if (!updated) { res.status(404).json({ error: 'Review not found' }); return; }
     res.json(updated);
   } catch (err) {
-    console.error('patch review error:', err);
+    logger.error('patch review error', err);
     res.status(500).json({ error: 'Failed to update review' });
   }
 });
