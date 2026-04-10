@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { usePostHog } from 'posthog-js/react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import Button from '@/components/ui/Button';
-import OtpModal from '@/components/auth/OtpModal';
 
 interface ContactInfo {
   phone: string;
@@ -21,15 +21,16 @@ interface ContactButtonProps {
 
 export default function ContactButton({ listingId, city, locality, propertyType, onReveal }: ContactButtonProps) {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const posthog = usePostHog();
-  const [showModal, setShowModal] = useState(false);
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const revealContact = async (allowAuthenticatedRequest = isAuthenticated) => {
     if (!allowAuthenticatedRequest) {
-      setShowModal(true);
+      router.push(`/auth/login?redirect=${encodeURIComponent(pathname || `/listings/${listingId}`)}`);
       return;
     }
     setLoading(true);
@@ -82,15 +83,6 @@ export default function ContactButton({ listingId, city, locality, propertyType,
             ? "Click to reveal owner's phone number"
             : 'Sign in to view contact details'}
         </p>
-      )}
-      {showModal && (
-        <OtpModal
-          onSuccess={() => {
-            setShowModal(false);
-            void revealContact(true);
-          }}
-          onClose={() => setShowModal(false)}
-        />
       )}
     </>
   );

@@ -18,7 +18,7 @@ type Step = 'otp-send' | 'otp-verify' | 'phone';
 
 export default function PosterVerificationModal({ onSuccess, onClose }: PosterVerificationModalProps) {
   const { user, login } = useAuth();
-  const [step, setStep] = useState<Step>(user?.emailVerified ? 'phone' : 'otp-send');
+  const [step, setStep] = useState<Step>(user?.posterEmailVerified ? 'phone' : 'otp-send');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -30,7 +30,7 @@ export default function PosterVerificationModal({ onSuccess, onClose }: PosterVe
     setError('');
     setLoading(true);
     try {
-      await api.post('/auth/send-otp', {});
+      await api.post('/account/send-otp', {});
       setStep('otp-verify');
       setOtpSent(true);
     } catch (err: unknown) {
@@ -44,7 +44,7 @@ export default function PosterVerificationModal({ onSuccess, onClose }: PosterVe
     setError('');
     setLoading(true);
     try {
-      const res = await api.post<{ user: AuthUser }>('/auth/verify-otp', { code });
+      const res = await api.post<{ user: AuthUser }>('/account/verify-otp', { code });
       login(res.user);
       if (res.user.isPosterVerified) {
         onSuccess();
@@ -62,7 +62,7 @@ export default function PosterVerificationModal({ onSuccess, onClose }: PosterVe
     setError('');
     setLoading(true);
     try {
-      const res = await api.patch<{ user: AuthUser }>('/auth/profile', { phone });
+      const res = await api.patch<{ user: AuthUser }>('/account/profile', { phone });
       login(res.user);
       onSuccess();
     } catch (err: unknown) {

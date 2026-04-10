@@ -38,7 +38,7 @@ export default function Navbar() {
                   </span>
                 ) : (
                   <Link
-                    href="/dashboard/verify"
+                    href="/dashboard/listings/new"
                     className="font-mono text-xs text-amber-600 hover:text-amber-700 uppercase tracking-[0.1em] transition-colors"
                   >
                     Get Verified

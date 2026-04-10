@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useFavorites, useToggleFavorite } from '@/hooks/useFavorites';
 import Button from '@/components/ui/Button';
-import OtpModal from '@/components/auth/OtpModal';
 
 interface FavoriteButtonProps {
   listingId: number;
@@ -15,9 +15,10 @@ interface FavoriteButtonProps {
 
 export default function FavoriteButton({ listingId, city, locality }: FavoriteButtonProps) {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const { data } = useFavorites();
   const { save, remove } = useToggleFavorite();
-  const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isSaved = useMemo(
@@ -29,7 +30,7 @@ export default function FavoriteButton({ listingId, city, locality }: FavoriteBu
 
   const toggleFavorite = async (allowAuthenticatedRequest = isAuthenticated) => {
     if (!allowAuthenticatedRequest) {
-      setShowModal(true);
+      router.push(`/auth/login?redirect=${encodeURIComponent(pathname || '/listings')}`);
       return;
     }
 
@@ -64,15 +65,6 @@ export default function FavoriteButton({ listingId, city, locality }: FavoriteBu
         <p className="font-sans text-xs text-muted-foreground text-center mt-2">
           {isAuthenticated ? 'Save this listing to revisit it later' : 'Sign in to save this listing'}
         </p>
-      )}
-      {showModal && (
-        <OtpModal
-          onSuccess={() => {
-            setShowModal(false);
-            void toggleFavorite(true);
-          }}
-          onClose={() => setShowModal(false)}
-        />
       )}
     </>
   );

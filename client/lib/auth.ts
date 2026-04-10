@@ -8,6 +8,7 @@ export interface AuthUser {
   phone?: string | null;
   name?: string | null;
   emailVerified: boolean;
+  posterEmailVerified?: boolean;
   isPosterVerified: boolean;
   isAdmin: boolean;
 }

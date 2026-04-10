@@ -1,20 +1,20 @@
 type TestCase = {
   name: string;
-  run: () => void;
+  run: () => void | Promise<void>;
 };
+
+export {};
 
 process.env.JWT_SECRET ??= 'test-jwt-secret';
 process.env.DATABASE_URL ??= 'postgresql://user:pass@localhost:5432/testdb';
 
-// Load test modules only after required env vars are present.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { runAuthTests } = require('./auth.test');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { runCompletenessTests } = require('./completeness.test');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { runListingFieldTests } = require('./listingFields.test');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { runSearchFilterTests } = require('./searchFilters.test');
+const [{ runAuthTests }, { runCompletenessTests }, { runListingFieldTests }, { runSearchFilterTests }] =
+  await Promise.all([
+    import('./auth.test.ts'),
+    import('./completeness.test.ts'),
+    import('./listingFields.test.ts'),
+    import('./searchFilters.test.ts'),
+  ]);
 
 const tests: TestCase[] = [
   { name: 'auth helpers', run: runAuthTests },
@@ -27,7 +27,7 @@ let failed = false;
 
 for (const testCase of tests) {
   try {
-    testCase.run();
+    await testCase.run();
     console.log(`PASS ${testCase.name}`);
   } catch (error) {
     failed = true;

@@ -334,7 +334,7 @@ router.get('/:id', async (req, res) => {
   const id = parseIntParam(req, res, 'id');
   if (id === null) return;
   try {
-    const requester = getAuthPayload(req);
+    const requester = await getAuthPayload(req);
     const canUseCache = requester === undefined;
     const cacheKey = getListingDetailCacheKey(id);
 

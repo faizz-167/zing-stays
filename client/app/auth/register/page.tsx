@@ -5,13 +5,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/lib/auth';
-import { api } from '@/lib/api';
+import { authClient } from '@/lib/auth-client';
 import { registerSchema, type RegisterInput } from '@/lib/schemas/auth';
-import { type AuthUser } from '@/lib/auth';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export default function RegisterPage() {
   const { login } = useAuth();
@@ -27,12 +24,15 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post<{ user: AuthUser }>('/auth/register', {
+      const result = await authClient.signUp.email({
         name: data.name,
         email: data.email,
         password: data.password,
       });
-      login(res.user);
+      if (result.error) {
+        throw new Error(result.error.message || 'Registration failed');
+      }
+      login({} as never);
       router.replace('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -97,8 +97,24 @@ export default function RegisterPage() {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <a
-          href={`${API_URL}/auth/google`}
+        <button
+          type="button"
+          onClick={async () => {
+            setError('');
+            setLoading(true);
+            try {
+              const result = await authClient.signIn.social({
+                provider: 'google',
+                callbackURL: '/dashboard',
+              });
+              if (result.error) {
+                throw new Error(result.error.message || 'Google sign-in failed');
+              }
+            } catch (err: unknown) {
+              setLoading(false);
+              setError(err instanceof Error ? err.message : 'Google sign-in failed');
+            }
+          }}
           className="flex items-center justify-center gap-3 w-full border border-border rounded-md px-4 py-2.5 font-sans text-sm font-medium hover:bg-muted transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -108,7 +124,7 @@ export default function RegisterPage() {
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
           Continue with Google
-        </a>
+        </button>
 
         <p className="mt-6 text-center font-sans text-sm text-muted-foreground">
           Already have an account?{' '}

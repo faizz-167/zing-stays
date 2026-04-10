@@ -68,12 +68,61 @@ export const users = pgTable('users', {
   passwordHash: varchar('password_hash', { length: 255 }),
   googleId: varchar('google_id', { length: 255 }).unique(),
   name: varchar('name', { length: 100 }),
+  image: text('image'),
   phone: varchar('phone', { length: 20 }),
   emailVerified: boolean('email_verified').default(false).notNull(),
+  posterEmailVerified: boolean('poster_email_verified').default(false).notNull(),
   isPosterVerified: boolean('is_poster_verified').default(false).notNull(),
   isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+export const accounts = pgTable('accounts', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  providerId: varchar('provider_id', { length: 100 }).notNull(),
+  accountId: varchar('account_id', { length: 255 }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  idToken: text('id_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at'),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('accounts_provider_account_uniq').on(table.providerId, table.accountId),
+  index('accounts_user_idx').on(table.userId),
+]);
+
+export const sessions = pgTable('sessions', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  ipAddress: varchar('ip_address', { length: 255 }),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('sessions_token_uniq').on(table.token),
+  index('sessions_user_idx').on(table.userId),
+  index('sessions_expires_idx').on(table.expiresAt),
+]);
+
+export const verifications = pgTable('verifications', {
+  id: varchar('id', { length: 255 }).primaryKey(),
+  identifier: varchar('identifier', { length: 255 }).notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('verifications_identifier_idx').on(table.identifier),
+  index('verifications_expires_idx').on(table.expiresAt),
+]);
 
 export const otpSessions = pgTable('otp_sessions', {
   id: serial('id').primaryKey(),
@@ -197,6 +246,12 @@ export type Locality = typeof localities.$inferSelect;
 export type NewLocality = typeof localities.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+export type Verification = typeof verifications.$inferSelect;
+export type NewVerification = typeof verifications.$inferInsert;
 export type Listing = typeof listings.$inferSelect;
 export type NewListing = typeof listings.$inferInsert;
 export type Favorite = typeof favorites.$inferSelect;

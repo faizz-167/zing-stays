@@ -1,43 +1,59 @@
 import { Request, Response, NextFunction } from 'express';
 import { eq } from 'drizzle-orm';
-import { verifyToken, JwtPayload } from '../lib/jwt';
+import { fromNodeHeaders } from 'better-auth/node';
 import { db } from '../db';
 import { users } from '../db/schema';
 import { logger } from '../lib/logger';
+import { auth } from '../lib/auth';
+
+export interface AuthUserPayload {
+  userId: number;
+  email: string;
+  isAdmin: boolean;
+}
 
 export interface AuthRequest extends Request {
-  user?: JwtPayload;
+  user?: AuthUserPayload;
 }
 
-export function extractAuthToken(req: Request): string | undefined {
-  const cookieToken = (req as Request & { cookies?: Record<string, string> }).cookies?.auth_token;
-  const authHeader = req.headers.authorization;
-  return cookieToken ?? (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined);
-}
+type BetterAuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
 
-export function getAuthPayload(req: Request): JwtPayload | undefined {
-  const token = extractAuthToken(req);
-  if (!token) return undefined;
-
-  try {
-    return verifyToken(token);
-  } catch {
+function toAuthUser(session: BetterAuthSession | null): AuthUserPayload | undefined {
+  if (!session?.user) {
     return undefined;
   }
+
+  return {
+    userId: Number(session.user.id),
+    email: session.user.email,
+    isAdmin: Boolean(session.user.isAdmin),
+  };
 }
 
-export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-  const token = extractAuthToken(req);
+async function getSession(req: Request): Promise<BetterAuthSession | null> {
+  return auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+}
 
-  if (!token) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+export async function getAuthPayload(req: Request): Promise<AuthUserPayload | undefined> {
+  const session = await getSession(req);
+  return toAuthUser(session);
+}
+
+export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    req.user = verifyToken(token);
+    const user = await getAuthPayload(req);
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    req.user = user;
     next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
+  } catch (err) {
+    logger.error('auth session lookup error', err);
+    res.status(401).json({ error: 'Unauthorized' });
   }
 }
 

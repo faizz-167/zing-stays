@@ -5,6 +5,8 @@ export interface ServerAuthUser {
   email: string;
   phone?: string | null;
   name?: string;
+  posterEmailVerified?: boolean;
+  isPosterVerified?: boolean;
   isAdmin?: boolean;
 }
 
@@ -18,7 +20,7 @@ export async function requireServerUser(): Promise<ServerAuthUser | null> {
     return null;
   }
 
-  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+  const res = await fetch(`${API_BASE_URL}/auth/get-session`, {
     headers: {
       Cookie: cookieHeader,
     },
@@ -29,6 +31,6 @@ export async function requireServerUser(): Promise<ServerAuthUser | null> {
     return null;
   }
 
-  const data = await res.json() as { user: ServerAuthUser };
-  return data.user;
+  const data = await res.json() as { user?: ServerAuthUser | null };
+  return data.user ?? null;
 }

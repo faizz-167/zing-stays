@@ -1,45 +1,48 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import { api } from '@/lib/api';
+import { authClient } from '@/lib/auth-client';
 
-interface ProviderState {
-  user: AuthUser | null;
-  isReady: boolean;
+function mapUser(user: Record<string, unknown> | null | undefined): AuthUser | null {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: Number(user.id),
+    email: String(user.email),
+    phone: typeof user.phone === 'string' ? user.phone : null,
+    name: typeof user.name === 'string' ? user.name : null,
+    emailVerified: Boolean(user.emailVerified),
+    posterEmailVerified: Boolean(user.posterEmailVerified),
+    isPosterVerified: Boolean(user.isPosterVerified),
+    isAdmin: Boolean(user.isAdmin),
+  };
 }
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<ProviderState>({ user: null, isReady: false });
+  const { data, isPending, refetch } = authClient.useSession();
+  const user = mapUser((data?.user ?? null) as Record<string, unknown> | null);
 
-  useEffect(() => {
-    api.get<{ user: AuthUser }>('/auth/me')
-      .then(({ user }) => setState({ user, isReady: true }))
-      .catch(() => setState({ user: null, isReady: true }));
-  }, []);
-
-  const login = useCallback((user: AuthUser) => {
-    setState({ user, isReady: true });
+  const login = useCallback((_user: AuthUser) => {
+    void refetch();
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await api.post('/auth/logout', {});
-    } catch {
-      // ignore — clear state regardless
-    }
-    setState({ user: null, isReady: true });
-  }, []);
+    await authClient.signOut();
+    await refetch();
+  }, [refetch]);
 
   const value = useMemo(
     () => ({
-      user: state.user,
+      user,
       login,
       logout,
-      isAuthenticated: !!state.user,
-      isReady: state.isReady,
+      isAuthenticated: !!user,
+      isReady: !isPending,
     }),
-    [state, login, logout],
+    [user, login, logout, isPending],
   );
 
   return (

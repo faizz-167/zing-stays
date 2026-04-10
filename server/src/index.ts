@@ -4,11 +4,13 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { sql } from 'drizzle-orm';
+import { toNodeHandler } from 'better-auth/node';
 
 dotenv.config();
 
 import { db } from './db';
 import { redis } from './lib/redis';
+import { auth } from './lib/auth';
 import { setupSearchIndex, reindexAllListings } from './services/search';
 import { searchClient } from './services/search';
 import './workers/searchIndexWorker';
@@ -79,13 +81,14 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json());
 // Trust the first proxy hop so req.ip reflects the real client IP.
 // Adjust the number to match the actual number of reverse-proxy hops
 // (e.g., nginx → this server = 1).
 app.set('trust proxy', 1);
 
-app.use('/api/auth', authRoutes);
+app.all('/api/auth/*', toNodeHandler(auth));
+app.use(express.json());
+app.use('/api/account', authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/favorites', favoriteRoutes);
