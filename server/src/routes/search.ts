@@ -16,7 +16,7 @@ const searchQuerySchema = z.object({
   city_id: z.coerce.number().int().positive().optional(),
   locality_id: z.coerce.number().int().positive().optional(),
   intent: z.enum(['buy', 'rent']).optional(),
-  room_type: z.enum(['single', 'double', 'shared']).optional(),
+  room_type: z.enum(['single', 'double', 'multiple', '1bhk', '2bhk', '3bhk', '4bhk']).optional(),
   property_type: z.enum(['pg', 'hostel', 'apartment', 'flat']).optional(),
   food_included: z.enum(['true', 'false']).optional(),
   gender: z.enum(['male', 'female', 'any']).optional(),

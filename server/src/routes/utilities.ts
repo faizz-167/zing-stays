@@ -64,7 +64,7 @@ router.get('/rent-estimate/:localityId', async (req, res) => {
 
     const singlePrices = rows.filter((r) => r.roomType === 'single').map((r) => r.price);
     const doublePrices = rows.filter((r) => r.roomType === 'double').map((r) => r.price);
-    const sharedPrices = rows.filter((r) => r.roomType === 'shared').map((r) => r.price);
+    const multiplePrices = rows.filter((r) => r.roomType === 'multiple').map((r) => r.price);
 
     const sampleSize = allPrices.length;
     const confidence: 'high' | 'medium' | 'low' =
@@ -76,7 +76,7 @@ router.get('/rent-estimate/:localityId', async (req, res) => {
         localityId,
         localityName: locality.name,
         overall: null,
-        byRoomType: { single: null, double: null, shared: null },
+        byRoomType: { single: null, double: null, multiple: null },
         confidence: 'low',
       });
       return;
@@ -89,7 +89,7 @@ router.get('/rent-estimate/:localityId', async (req, res) => {
       byRoomType: {
         single: computeStats(singlePrices),
         double: computeStats(doublePrices),
-        shared: computeStats(sharedPrices),
+        multiple: computeStats(multiplePrices),
       },
       confidence,
     };
