@@ -3,6 +3,7 @@ import { db } from '../db';
 import { cities, localities } from '../db/schema';
 import { and, eq, asc } from 'drizzle-orm';
 import { z } from 'zod';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/cities', async (_req, res) => {
       .orderBy(asc(cities.name));
     res.json({ data: rows });
   } catch (err) {
-    console.error('cities fetch error:', err);
+    logger.error('cities fetch error', err);
     res.status(500).json({ error: 'Failed to fetch cities' });
   }
 });
@@ -40,7 +41,7 @@ router.get(['/localities', '/cities/localities'], async (req, res) => {
       .orderBy(asc(localities.name));
     res.json({ data: rows });
   } catch (err) {
-    console.error('localities fetch error:', err);
+    logger.error('localities fetch error', err);
     res.status(500).json({ error: 'Failed to fetch localities' });
   }
 });

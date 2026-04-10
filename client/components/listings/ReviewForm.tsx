@@ -34,7 +34,7 @@ function StarInput({ value, onChange }: { value: number; onChange: (n: number) =
         >
           <svg
             className={`h-7 w-7 transition-colors ${
-              star <= (hovered || value) ? 'text-yellow-400' : 'text-gray-200'
+              star <= (hovered || value) ? 'text-yellow-400' : 'text-muted-foreground/30'
             }`}
             fill="currentColor"
             viewBox="0 0 20 20"
@@ -114,9 +114,9 @@ export default function ReviewForm({
 
   if (!user) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-        <p className="text-sm text-gray-600">
-          <Link href="/auth/login" className="font-medium text-blue-600 hover:underline">
+      <div className="rounded-xl border border-border bg-muted p-4">
+        <p className="text-sm text-muted-foreground">
+          <Link href="/auth/login" className="font-medium text-accent hover:underline">
             Sign in
           </Link>{' '}
           to leave a review.
@@ -127,16 +127,16 @@ export default function ReviewForm({
 
   if (user.id === listingOwnerId) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-        <p className="text-sm text-gray-500">Owners cannot review their own listing.</p>
+      <div className="rounded-xl border border-border bg-muted p-4">
+        <p className="text-sm text-muted-foreground">Owners cannot review their own listing.</p>
       </div>
     );
   }
 
   if (!hasContacted) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-        <p className="text-sm text-gray-600">Reveal the owner&apos;s contact to unlock reviews.</p>
+      <div className="rounded-xl border border-border bg-muted p-4">
+        <p className="text-sm text-muted-foreground">Reveal the owner&apos;s contact to unlock reviews.</p>
       </div>
     );
   }
@@ -162,11 +162,11 @@ export default function ReviewForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h4 className="mb-4 text-sm font-semibold text-gray-800">Write a Review</h4>
+    <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <h4 className="mb-4 text-sm font-semibold text-foreground">Write a Review</h4>
 
       <div className="mb-3">
-        <label className="mb-1.5 block text-xs font-medium text-gray-600">Your Rating</label>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Your Rating</label>
         <Controller
           name="rating"
           control={control}
@@ -180,16 +180,16 @@ export default function ReviewForm({
       </div>
 
       <div className="mb-3">
-        <label className="mb-1.5 block text-xs font-medium text-gray-600">
-          Your Review <span className="text-gray-400">(min 20 characters)</span>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Your Review <span className="text-muted-foreground/70">(min 20 characters)</span>
         </label>
         <textarea
           {...register('body')}
           rows={4}
           placeholder="Share your experience with this property…"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        <p className="mt-0.5 text-right text-xs text-gray-400">{bodyValue.trim().length} chars</p>
+        <p className="mt-0.5 text-right text-xs text-muted-foreground/70">{bodyValue.trim().length} chars</p>
         {errors.body && (
           <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>
         )}

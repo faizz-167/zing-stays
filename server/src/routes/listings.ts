@@ -7,6 +7,8 @@ import { contactRevealLimiter } from '../middleware/rateLimit';
 import { calculateCompleteness, getTrustBadges } from '../services/completeness';
 import { searchIndexQueue } from '../lib/queues';
 import { cacheGet, cacheSet, cacheInvalidate, cacheInvalidateByPrefix } from '../lib/redis';
+import { logger } from '../lib/logger';
+import { ListingInputError, parseIntParam } from '../lib/routeUtils';
 import {
   furnishingValues,
   genderValues,
@@ -181,7 +183,7 @@ async function resolveListingLocation(
         .then(rows => rows[0])
     : undefined;
   if (resolvedCityId && !cityRow) {
-    throw new Error('Selected city does not exist');
+    throw new ListingInputError('Selected city does not exist');
   }
 
   const localityRow = resolvedLocalityId
@@ -193,7 +195,7 @@ async function resolveListingLocation(
         .then(rows => rows[0])
     : undefined;
   if (resolvedLocalityId && !localityRow) {
-    throw new Error('Selected locality does not exist');
+    throw new ListingInputError('Selected locality does not exist');
   }
 
   if (localityRow) {
@@ -206,15 +208,15 @@ async function resolveListingLocation(
         .limit(1)
         .then(rows => rows[0]);
     } else if (localityRow.cityId !== resolvedCityId) {
-      throw new Error('Selected locality does not belong to the selected city');
+      throw new ListingInputError('Selected locality does not belong to the selected city');
     }
   }
 
   if (!resolvedCityId) {
-    throw new Error('cityId is required');
+    throw new ListingInputError('cityId is required');
   }
   if (!resolvedLocalityId) {
-    throw new Error('localityId is required');
+    throw new ListingInputError('localityId is required');
   }
 
   return {
@@ -244,18 +246,8 @@ function withDisplayLocation<T extends { city: string | null; locality: string |
   };
 }
 
-function isListingInputError(error: unknown): error is Error {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return [
-    'Selected city does not exist',
-    'Selected locality does not exist',
-    'Selected locality does not belong to the selected city',
-    'cityId is required',
-    'localityId is required',
-  ].includes(error.message);
+function isListingInputError(error: unknown): error is ListingInputError {
+  return error instanceof ListingInputError;
 }
 
 // GET /api/listings — public list with filters
@@ -308,7 +300,7 @@ router.get('/', async (req, res) => {
     await cacheSet(cacheKey, payload, 60);
     res.json(payload);
   } catch (err) {
-    console.error('listings list error:', err);
+    logger.error('listings list error', err);
     res.status(500).json({ error: 'Failed to fetch listings' });
   }
 });
@@ -332,15 +324,15 @@ router.get('/mine', requireAuth, async (req: AuthRequest, res) => {
     });
     res.json({ data: withBadges });
   } catch (err) {
-    console.error('my listings error:', err);
+    logger.error('my listings error', err);
     res.status(500).json({ error: 'Failed to fetch your listings' });
   }
 });
 
 // GET /api/listings/:id — public detail
 router.get('/:id', async (req, res) => {
-  const id = parseInt(req.params.id as string);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   try {
     const requester = getAuthPayload(req);
     const canUseCache = requester === undefined;
@@ -390,7 +382,7 @@ router.get('/:id', async (req, res) => {
     }
     res.json(payload);
   } catch (err) {
-    console.error('listing detail error:', err);
+    logger.error('listing detail error', err);
     res.status(500).json({ error: 'Failed to fetch listing' });
   }
 });
@@ -437,7 +429,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const created = await getListingWithLocationById(listing.id);
 
     searchIndexQueue.add('index-listing', { listingId: listing.id, action: 'upsert' }).catch(
-      (err) => console.error('searchIndexQueue add error:', err),
+      (err) => logger.error('searchIndexQueue add error', err),
     );
 
     await invalidateListingCaches(listing.id);
@@ -447,15 +439,15 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: err.message });
       return;
     }
-    console.error('create listing error:', err);
+    logger.error('create listing error', err);
     res.status(500).json({ error: 'Failed to create listing' });
   }
 });
 
 // PUT /api/listings/:id — update (owner only)
 router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   try {
     const [existing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
     if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
@@ -495,7 +487,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     const hydrated = await getListingWithLocationById(updated.id);
 
     searchIndexQueue.add('index-listing', { listingId: updated.id, action: 'upsert' }).catch(
-      (err) => console.error('searchIndexQueue add error:', err),
+      (err) => logger.error('searchIndexQueue add error', err),
     );
 
     await invalidateListingCaches(updated.id);
@@ -505,15 +497,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: err.message });
       return;
     }
-    console.error('update listing error:', err);
+    logger.error('update listing error', err);
     res.status(500).json({ error: 'Failed to update listing' });
   }
 });
 
 // DELETE /api/listings/:id (owner or admin)
 router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   try {
     const [existing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
     if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
@@ -522,20 +514,20 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
     }
     await db.delete(listings).where(eq(listings.id, id));
     searchIndexQueue.add('index-listing', { listingId: id, action: 'delete' }).catch(
-      (err) => console.error('searchIndexQueue add error:', err),
+      (err) => logger.error('searchIndexQueue add error', err),
     );
     await invalidateListingCaches(id);
     res.json({ message: 'Listing deleted' });
   } catch (err) {
-    console.error('delete listing error:', err);
+    logger.error('delete listing error', err);
     res.status(500).json({ error: 'Failed to delete listing' });
   }
 });
 
 // POST /api/listings/:id/contact — reveal owner phone (auth required)
 router.post('/:id/contact', requireAuth, contactRevealLimiter, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   try {
     const [listing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
     if (!listing) { res.status(404).json({ error: 'Not found' }); return; }
@@ -562,7 +554,7 @@ router.post('/:id/contact', requireAuth, contactRevealLimiter, async (req: AuthR
     if (!owner.phone) { res.status(409).json({ error: 'Owner has not added a contact phone number yet' }); return; }
     res.json({ phone: owner.phone, name: owner.name });
   } catch (err) {
-    console.error('contact reveal error:', err);
+    logger.error('contact reveal error', err);
     res.status(500).json({ error: 'Failed to reveal contact' });
   }
 });

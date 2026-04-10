@@ -4,6 +4,7 @@ import { contentPages, cities, localities } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireAdmin, type AuthRequest } from '../middleware/auth';
 import { logger } from '../lib/logger';
+import { parseIntParam } from '../lib/routeUtils';
 import { z } from 'zod';
 
 const router = Router();
@@ -19,6 +20,9 @@ const contentPageSchema = z.object({
 });
 
 const updateContentPageSchema = contentPageSchema.partial();
+const contentListQuerySchema = z.object({
+  cityId: z.coerce.number().int().positive().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Admin endpoints — declared BEFORE /:slug to prevent 'admin' matching as slug
@@ -51,8 +55,8 @@ router.get('/admin', requireAuth, requireAdmin, async (_req, res) => {
 
 // GET /api/content/admin/:id — admin: fetch any page by ID
 router.get('/admin/:id', requireAuth, requireAdmin, async (req, res) => {
-  const id = parseInt(req.params.id as string, 10);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
 
   try {
     const [page] = await db
@@ -75,10 +79,16 @@ router.get('/admin/:id', requireAuth, requireAdmin, async (req, res) => {
 
 // GET /api/content?cityId=X — public: list published pages for a city
 router.get('/', async (req, res) => {
-  const cityId = req.query.cityId ? parseInt(req.query.cityId as string, 10) : undefined;
+  const parsedQuery = contentListQuerySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    res.status(400).json({ error: parsedQuery.error.issues[0].message });
+    return;
+  }
+
+  const { cityId } = parsedQuery.data;
   try {
     const conditions = [eq(contentPages.isPublished, true)];
-    if (cityId && !isNaN(cityId)) conditions.push(eq(contentPages.cityId, cityId));
+    if (cityId !== undefined) conditions.push(eq(contentPages.cityId, cityId));
 
     const pages = await db
       .select({
@@ -171,8 +181,8 @@ router.post('/', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
 
 // PUT /api/content/:id — admin: update page
 router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string, 10);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
 
   const result = updateContentPageSchema.safeParse(req.body);
   if (!result.success) {
@@ -206,8 +216,8 @@ router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
 
 // DELETE /api/content/:id — admin: delete page
 router.delete('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string, 10);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   try {
     const [existing] = await db
       .select({ id: contentPages.id })

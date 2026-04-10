@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { verifyToken, JwtPayload } from '../lib/jwt';
 import { db } from '../db';
 import { users } from '../db/schema';
+import { logger } from '../lib/logger';
 
 export interface AuthRequest extends Request {
   user?: JwtPayload;
@@ -61,7 +62,7 @@ export async function requireAdmin(req: AuthRequest, res: Response, next: NextFu
     req.user.isAdmin = true;
     next();
   } catch (err) {
-    console.error('admin auth check error:', err);
+    logger.error('admin auth check error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

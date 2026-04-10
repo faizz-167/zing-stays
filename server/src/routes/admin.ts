@@ -5,6 +5,8 @@ import { eq, desc, getTableColumns } from 'drizzle-orm';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth';
 import { searchIndexQueue } from '../lib/queues';
 import { cacheInvalidate, cacheInvalidateByPrefix } from '../lib/redis';
+import { logger } from '../lib/logger';
+import { parseIntParam } from '../lib/routeUtils';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -33,14 +35,14 @@ router.get('/listings', async (_req, res) => {
       })),
     });
   } catch (err) {
-    console.error('admin listings error:', err);
+    logger.error('admin listings error', err);
     res.status(500).json({ error: 'Failed to fetch listings' });
   }
 });
 
 router.put('/listings/:id/status', async (req: AuthRequest, res) => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
   const { status } = req.body;
   if (!['active', 'inactive', 'draft'].includes(status)) {
     res.status(400).json({ error: 'Invalid status' }); return;
@@ -53,11 +55,11 @@ router.put('/listings/:id/status', async (req: AuthRequest, res) => {
     if (!updated) { res.status(404).json({ error: 'Listing not found' }); return; }
     if (status === 'inactive') {
       searchIndexQueue.add('index-listing', { listingId: id, action: 'delete' }).catch(
-        (err) => console.error('searchIndexQueue add error:', err),
+        (err) => logger.error('searchIndexQueue add error', err),
       );
     } else {
       searchIndexQueue.add('index-listing', { listingId: updated.id, action: 'upsert' }).catch(
-        (err) => console.error('searchIndexQueue add error:', err),
+        (err) => logger.error('searchIndexQueue add error', err),
       );
     }
     await Promise.all([
@@ -66,7 +68,7 @@ router.put('/listings/:id/status', async (req: AuthRequest, res) => {
     ]);
     res.json(updated);
   } catch (err) {
-    console.error('admin status error:', err);
+    logger.error('admin status error', err);
     res.status(500).json({ error: 'Failed to update listing status' });
   }
 });

@@ -4,16 +4,15 @@ import { listings, localities, priceSnapshots } from '../db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { cacheGet, cacheSet } from '../lib/redis';
 import { roomTypeValues } from '../lib/listingFields';
+import { logger } from '../lib/logger';
+import { parseIntParam } from '../lib/routeUtils';
 
 const router = Router();
 
 // GET /api/utilities/rent-estimate/:localityId
 router.get('/rent-estimate/:localityId', async (req, res) => {
-  const localityId = parseInt(req.params.localityId as string, 10);
-  if (isNaN(localityId)) {
-    res.status(400).json({ error: 'Invalid localityId' });
-    return;
-  }
+  const localityId = parseIntParam(req, res, 'localityId');
+  if (localityId === null) return;
 
   const cacheKey = `util:rent-est:${localityId}`;
   try {
@@ -97,18 +96,15 @@ router.get('/rent-estimate/:localityId', async (req, res) => {
     await cacheSet(cacheKey, payload, 6 * 60 * 60);
     res.json(payload);
   } catch (err) {
-    console.error('rent-estimate error:', err);
+    logger.error('rent-estimate error', err);
     res.status(500).json({ error: 'Failed to compute rent estimate' });
   }
 });
 
 // GET /api/utilities/price-trends/:localityId
 router.get('/price-trends/:localityId', async (req, res) => {
-  const localityId = parseInt(req.params.localityId as string, 10);
-  if (isNaN(localityId)) {
-    res.status(400).json({ error: 'Invalid localityId' });
-    return;
-  }
+  const localityId = parseIntParam(req, res, 'localityId');
+  if (localityId === null) return;
 
   const cacheKey = `util:trends:${localityId}`;
   try {
@@ -182,7 +178,7 @@ router.get('/price-trends/:localityId', async (req, res) => {
     await cacheSet(cacheKey, payload, 6 * 60 * 60);
     res.json(payload);
   } catch (err) {
-    console.error('price-trends error:', err);
+    logger.error('price-trends error', err);
     res.status(500).json({ error: 'Failed to compute price trends' });
   }
 });

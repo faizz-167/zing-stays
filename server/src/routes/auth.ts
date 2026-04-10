@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../db';
 import { users } from '../db/schema';
@@ -7,11 +7,9 @@ import { sendOtp, verifyOtp } from '../services/otp';
 import { signToken } from '../lib/jwt';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { otpSendLimiter, otpVerifyLimiter } from '../middleware/rateLimit';
+import { logger } from '../lib/logger';
 
 const router = Router();
-const OTP_IP_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const OTP_IP_LIMIT_MAX_REQUESTS = 5;
-const otpRequestLog = new Map<string, number[]>();
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim().toLowerCase();
 
 if (!ADMIN_EMAIL) {
@@ -40,30 +38,7 @@ const profileSchema = z
     { message: 'At least one field is required' },
   );
 
-function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0]!.trim();
-  }
 
-  return req.ip || req.socket.remoteAddress || 'unknown';
-}
-
-function isOtpRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recentRequests = (otpRequestLog.get(ip) ?? []).filter(
-    (timestamp) => timestamp > now - OTP_IP_LIMIT_WINDOW_MS,
-  );
-
-  if (recentRequests.length >= OTP_IP_LIMIT_MAX_REQUESTS) {
-    otpRequestLog.set(ip, recentRequests);
-    return true;
-  }
-
-  recentRequests.push(now);
-  otpRequestLog.set(ip, recentRequests);
-  return false;
-}
 
 // POST /api/auth/send-otp
 router.post('/send-otp', otpSendLimiter, async (req, res) => {
@@ -72,15 +47,11 @@ router.post('/send-otp', otpSendLimiter, async (req, res) => {
     res.status(400).json({ error: result.error.issues[0]?.message ?? 'Invalid request' });
     return;
   }
-  if (isOtpRateLimited(getClientIp(req))) {
-    res.status(429).json({ error: 'Too many OTP requests. Please try again later.' });
-    return;
-  }
   try {
     await sendOtp(result.data.email);
     res.json({ message: 'OTP sent successfully' });
   } catch (err) {
-    console.error('OTP send error:', err);
+    logger.error('OTP send error', err);
     const message = err instanceof Error ? err.message : 'Failed to send OTP';
     const status = message.includes('wait before requesting') ? 429 : 500;
     res.status(status).json({ error: message });
@@ -133,7 +104,7 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
       user: { id: user.id, email: user.email, phone: user.phone, name: user.name, isAdmin: user.isAdmin },
     });
   } catch (err) {
-    console.error('verify-otp error:', err);
+    logger.error('verify-otp error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -147,7 +118,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
       user: { id: user.id, email: user.email, phone: user.phone, name: user.name, isAdmin: user.isAdmin },
     });
   } catch (err) {
-    console.error('me error:', err);
+    logger.error('me error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -179,7 +150,7 @@ router.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
       },
     });
   } catch (err) {
-    console.error('profile update error:', err);
+    logger.error('profile update error', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

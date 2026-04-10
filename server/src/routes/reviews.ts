@@ -6,6 +6,7 @@ import { requireAuth, requireAdmin, type AuthRequest } from '../middleware/auth'
 import { reviewPostLimiter } from '../middleware/rateLimit';
 import { moderationQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
+import { parseIntParam } from '../lib/routeUtils';
 import { z } from 'zod';
 
 const router = Router();
@@ -115,11 +116,8 @@ router.get('/admin', requireAuth, requireAdmin, async (req: AuthRequest, res) =>
 
 // GET /api/reviews/:listingId — public, only approved reviews
 router.get('/:listingId', async (req, res) => {
-  const listingId = parseInt(req.params.listingId as string, 10);
-  if (isNaN(listingId)) {
-    res.status(400).json({ error: 'Invalid listingId' });
-    return;
-  }
+  const listingId = parseIntParam(req, res, 'listingId');
+  if (listingId === null) return;
 
   try {
     const rows = await db
@@ -149,8 +147,8 @@ router.get('/:listingId', async (req, res) => {
 
 // PATCH /api/reviews/:id — admin: update review status
 router.patch('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  const id = parseInt(req.params.id as string, 10);
-  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+  const id = parseIntParam(req, res, 'id');
+  if (id === null) return;
 
   const statusSchema = z.object({ status: z.enum(['approved', 'rejected']) });
   const result = statusSchema.safeParse(req.body);

@@ -44,7 +44,8 @@
       "Bash(npx tsx:*)",
       "Bash(gh pr create --title 'feat: Phase 2 — Schema cleanup & foundation' --body ':*)",
       "Bash(where gh:*)",
-      "Bash(winget list:*)"
+      "Bash(winget list:*)",
+      "Bash(gh pr create --title 'feat: Phase 3 — Authentication Redesign' --body ':*)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { redis } from '../lib/redis';
 import { AuthRequest } from './auth';
+import { logger } from '../lib/logger';
 
 interface RateLimitOptions {
   keyPrefix: string;
@@ -32,7 +33,7 @@ function createRateLimiter(options: RateLimitOptions) {
       }
     } catch (err) {
       // Redis unavailable — fail open to avoid blocking users
-      console.error('Rate limiter error:', err instanceof Error ? err.message : err);
+      logger.error('Rate limiter error', err);
     }
     next();
   };

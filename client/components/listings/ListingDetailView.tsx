@@ -26,6 +26,9 @@ const AMENITY_LABELS: Record<string, string> = {
   cctv: 'CCTV Security',
   gym: 'Gym',
   kitchen: 'Kitchen Access',
+  geyser: 'Geyser',
+  furnished: 'Fully Furnished',
+  balcony: 'Balcony',
 };
 
 export interface ListingDetailData {
