@@ -6,4 +6,5 @@ dist/
 drizzle/
 *.tsbuildinfo
 server/drizzle.config.js
-*.agent/.worktrees/
+*.agent/
+.worktrees/
