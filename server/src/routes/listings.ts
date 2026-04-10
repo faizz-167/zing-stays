@@ -387,7 +387,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/listings — create (auth required)
+// POST /api/listings — create (auth required); always saved as draft
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
   const result = createListingSchema.safeParse(req.body);
   if (!result.success) {
@@ -425,6 +425,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       rules: data.rules,
       images: data.images,
       completenessScore,
+      status: 'draft',
     }).returning();
     const created = await getListingWithLocationById(listing.id);
 
@@ -499,6 +500,48 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     }
     logger.error('update listing error', err);
     res.status(500).json({ error: 'Failed to update listing' });
+  }
+});
+
+// PATCH /api/listings/:id/status — change listing status (owner or admin)
+router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return; }
+
+  const statusSchema = z.object({ status: z.enum(['draft', 'active', 'inactive']) });
+  const result = statusSchema.safeParse(req.body);
+  if (!result.success) { res.status(400).json({ error: 'Invalid status value' }); return; }
+
+  try {
+    const [existing] = await db.select().from(listings).where(eq(listings.id, id)).limit(1);
+    if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
+    if (existing.ownerId !== req.user!.userId && !req.user!.isAdmin) {
+      res.status(403).json({ error: 'Forbidden' }); return;
+    }
+
+    if (result.data.status === 'active') {
+      const [user] = await db
+        .select({ isPosterVerified: users.isPosterVerified })
+        .from(users)
+        .where(eq(users.id, req.user!.userId))
+        .limit(1);
+      if (!user?.isPosterVerified) {
+        res.status(403).json({ error: 'Complete poster verification before publishing.' });
+        return;
+      }
+    }
+
+    const [updated] = await db
+      .update(listings)
+      .set({ status: result.data.status, updatedAt: new Date() })
+      .where(eq(listings.id, id))
+      .returning();
+
+    await invalidateListingCaches(id);
+    res.json({ id: updated.id, status: updated.status });
+  } catch (err) {
+    console.error('status update error:', err);
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

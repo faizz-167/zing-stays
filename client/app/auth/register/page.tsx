@@ -1,41 +1,41 @@
 'use client';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
-import { loginSchema, type LoginInput } from '@/lib/schemas/auth';
+import { registerSchema, type RegisterInput } from '@/lib/schemas/auth';
 import { type AuthUser } from '@/lib/auth';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') ?? '/dashboard';
-  const oauthError = searchParams.get('error') === 'oauth';
-
-  const [error, setError] = useState(oauthError ? 'Google sign-in failed. Please try again.' : '');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: LoginInput) => {
+  const onSubmit = async (data: RegisterInput) => {
     setError('');
     setLoading(true);
     try {
-      const res = await api.post<{ user: AuthUser }>('/auth/login', data);
+      const res = await api.post<{ user: AuthUser }>('/auth/register', {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
       login(res.user);
-      router.replace(redirect);
+      router.replace('/dashboard');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -47,31 +47,47 @@ export default function LoginPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
             <span className="h-px flex-1 bg-border" />
-            <span className="font-mono text-xs uppercase tracking-[0.15em] text-accent">Sign In</span>
+            <span className="font-mono text-xs uppercase tracking-[0.15em] text-accent">Create Account</span>
             <span className="h-px flex-1 bg-border" />
           </div>
-          <h1 className="font-display text-3xl mb-2">Welcome back</h1>
-          <p className="font-sans text-muted-foreground text-sm">Sign in to your ZindStay account</p>
+          <h1 className="font-display text-3xl mb-2">Join ZindStay</h1>
+          <p className="font-sans text-muted-foreground text-sm">Create an account to list or save rooms</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
+              Full Name
+            </label>
+            <Input type="text" placeholder="Your name" {...register('name')} autoFocus />
+            {errors.name && <p className="font-sans text-sm text-red-600 mt-1">{errors.name.message}</p>}
+          </div>
+          <div>
+            <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
               Email Address
             </label>
-            <Input type="email" placeholder="you@example.com" {...register('email')} autoFocus />
+            <Input type="email" placeholder="you@example.com" {...register('email')} />
             {errors.email && <p className="font-sans text-sm text-red-600 mt-1">{errors.email.message}</p>}
           </div>
           <div>
             <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
               Password
             </label>
-            <Input type="password" placeholder="••••••••" {...register('password')} />
+            <Input type="password" placeholder="Min. 8 characters" {...register('password')} />
             {errors.password && <p className="font-sans text-sm text-red-600 mt-1">{errors.password.message}</p>}
+          </div>
+          <div>
+            <label className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground mb-2 block">
+              Confirm Password
+            </label>
+            <Input type="password" placeholder="Re-enter password" {...register('confirmPassword')} />
+            {errors.confirmPassword && (
+              <p className="font-sans text-sm text-red-600 mt-1">{errors.confirmPassword.message}</p>
+            )}
           </div>
           {error && <p className="font-sans text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>
 
@@ -95,9 +111,9 @@ export default function LoginPage() {
         </a>
 
         <p className="mt-6 text-center font-sans text-sm text-muted-foreground">
-          No account?{' '}
-          <Link href="/auth/register" className="text-accent hover:underline font-medium">
-            Create one
+          Already have an account?{' '}
+          <Link href="/auth/login" className="text-accent hover:underline font-medium">
+            Sign in
           </Link>
         </p>
       </div>

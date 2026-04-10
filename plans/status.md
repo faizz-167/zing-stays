@@ -22,7 +22,7 @@
 |-------|-------|--------|-------|
 | 1 | Security & Review Fixes | `COMPLETED` | Highest priority — do first |
 | 2 | Schema Cleanup & Foundation | `COMPLETED` | Depends on Phase 1 |
-| 3 | Authentication Redesign | `NOT_STARTED` | Depends on Phase 2 |
+| 3 | Authentication Redesign | `COMPLETED` | Depends on Phase 2 |
 | 4 | Guided Search Widget | `NOT_STARTED` | Depends on Phase 3 |
 | 5 | Filter Panel Redesign | `NOT_STARTED` | Depends on Phase 4 |
 | 6 | Listing Card Redesign | `NOT_STARTED` | Depends on Phase 5 |
@@ -59,18 +59,18 @@
 
 | Subtask | Status | Notes |
 |---------|--------|-------|
-| 3.1 Update `users` schema (passwordHash, emailVerified, isPosterVerified, googleId) | `NOT_STARTED` | Part of schema reset in Phase 2 |
-| 3.2 Backend: `POST /api/auth/register` (email + password) | `NOT_STARTED` | bcrypt hash, create user, return JWT |
-| 3.3 Backend: `POST /api/auth/login` (email + password) | `NOT_STARTED` | Compare hash, return JWT |
-| 3.4 Backend: Google OAuth flow (`/api/auth/google` + callback) | `NOT_STARTED` | Passport.js or manual OAuth2, upsert user |
-| 3.5 Backend: OTP send/verify now sets `emailVerified = true` | `NOT_STARTED` | Move OTP from primary auth to poster verification step |
-| 3.6 Backend: `PATCH /api/auth/phone` sets phone; auto-sets `isPosterVerified` | `NOT_STARTED` | `isPosterVerified = emailVerified && phone != null` |
-| 3.7 Backend: Guard listing publish behind `isPosterVerified` | `NOT_STARTED` | Allow draft creation, block status change to `active` |
-| 3.8 Frontend: `/auth/login` page (email/password + Google OAuth button) | `NOT_STARTED` | Replace OTP modal as primary login |
-| 3.9 Frontend: `/auth/register` page (name, email, password) | `NOT_STARTED` | Separate registration page |
-| 3.10 Frontend: Poster verification flow modal/page | `NOT_STARTED` | Step 1: email OTP, Step 2: phone number |
-| 3.11 Frontend: Update Navbar auth state display | `NOT_STARTED` | Show verified badge, link to verification flow |
-| 3.12 Frontend: Draft listing flow — create draft before verifying | `NOT_STARTED` | Save as draft, show publish gate |
+| 3.1 Update `users` schema (passwordHash, emailVerified, isPosterVerified, googleId) | `COMPLETED` | Added passwordHash, googleId, emailVerified, isPosterVerified columns |
+| 3.2 Backend: `POST /api/auth/register` (email + password) | `COMPLETED` | bcrypt hash, create user, return JWT |
+| 3.3 Backend: `POST /api/auth/login` (email + password) | `COMPLETED` | Compare hash, return JWT |
+| 3.4 Backend: Google OAuth flow (`/api/auth/google` + callback) | `COMPLETED` | passport-google-oauth20, upsert user |
+| 3.5 Backend: OTP send/verify now sets `emailVerified = true` | `COMPLETED` | OTP gated behind requireAuth, sets emailVerified |
+| 3.6 Backend: `PATCH /api/auth/phone` sets phone; auto-sets `isPosterVerified` | `COMPLETED` | isPosterVerified = emailVerified && phone != null |
+| 3.7 Backend: Guard listing publish behind `isPosterVerified` | `COMPLETED` | PATCH /:id/status endpoint added; create defaults to draft |
+| 3.8 Frontend: `/auth/login` page (email/password + Google OAuth button) | `COMPLETED` | New login page at /auth/login |
+| 3.9 Frontend: `/auth/register` page (name, email, password) | `COMPLETED` | New register page at /auth/register |
+| 3.10 Frontend: Poster verification flow modal/page | `COMPLETED` | PosterVerificationModal: 2-step OTP + phone |
+| 3.11 Frontend: Update Navbar auth state display | `COMPLETED` | Verified badge, Get Verified link, login/register links |
+| 3.12 Frontend: Draft listing flow — create draft before verifying | `COMPLETED` | Save draft + publish gate with PosterVerificationModal |
 
 ---
 
@@ -144,3 +144,4 @@
 |------|-------|---------|-------|-------|
 | 2026-04-10 | 1 | 1.1–1.4 | claude-sonnet-4-6 | All Phase 1 subtasks complete |
 | 2026-04-10 | 2 | 2.1–2.7 | claude-sonnet-4-6 | All Phase 2 subtasks complete |
+| 2026-04-10 | 3 | 3.1–3.12 | claude-sonnet-4-6 | All Phase 3 subtasks complete |

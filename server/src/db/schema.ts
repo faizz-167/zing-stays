@@ -65,8 +65,12 @@ export const localityNeighbors = pgTable('locality_neighbors', {
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  phone: varchar('phone', { length: 20 }),
+  passwordHash: varchar('password_hash', { length: 255 }),
+  googleId: varchar('google_id', { length: 255 }).unique(),
   name: varchar('name', { length: 100 }),
+  phone: varchar('phone', { length: 20 }),
+  emailVerified: boolean('email_verified').default(false).notNull(),
+  isPosterVerified: boolean('is_poster_verified').default(false).notNull(),
   isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

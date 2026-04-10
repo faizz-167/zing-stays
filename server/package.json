@@ -21,10 +21,14 @@
   "type": "commonjs",
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/ioredis": "^4.28.10",
     "@types/nodemailer": "^8.0.0",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.17",
     "axios": "^1.14.0",
+    "bcrypt": "^6.0.0",
     "bullmq": "^5.73.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -37,6 +41,8 @@
     "jsonwebtoken": "^9.0.3",
     "meilisearch": "^0.57.0",
     "nodemailer": "^8.0.5",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pg": "^8.20.0",
     "zod": "^4.3.6"
   },

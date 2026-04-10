@@ -28,20 +28,44 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {isAuthenticated ? (
             <>
-              <span className="hidden md:block font-sans text-sm text-muted-foreground">{user?.name || user?.email}</span>
+              <div className="hidden md:flex flex-col items-end gap-0.5">
+                <span className="font-sans text-sm text-foreground leading-tight">
+                  {user?.name || user?.email}
+                </span>
+                {user?.isPosterVerified ? (
+                  <span className="font-mono text-xs text-emerald-600 uppercase tracking-[0.1em]">
+                    Verified Poster
+                  </span>
+                ) : (
+                  <Link
+                    href="/dashboard/verify"
+                    className="font-mono text-xs text-amber-600 hover:text-amber-700 uppercase tracking-[0.1em] transition-colors"
+                  >
+                    Get Verified
+                  </Link>
+                )}
+              </div>
               <Button variant="ghost" size="sm" onClick={logout}>Sign Out</Button>
             </>
           ) : (
-            <Link
-              href="/auth"
-              className={cn(
-                'inline-flex items-center justify-center font-sans font-medium touch-manipulation transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                'min-h-[44px] px-4 py-2 text-sm',
-                'bg-accent text-accent-foreground rounded-md shadow-sm hover:bg-accent-secondary hover:shadow-md active:translate-y-0',
-              )}
-            >
-              Sign In
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/auth/login"
+                className="font-sans text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth/register"
+                className={cn(
+                  'inline-flex items-center justify-center font-sans font-medium touch-manipulation transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  'min-h-[44px] px-4 py-2 text-sm',
+                  'bg-accent text-accent-foreground rounded-md shadow-sm hover:bg-accent-secondary hover:shadow-md active:translate-y-0',
+                )}
+              >
+                Register
+              </Link>
+            </div>
           )}
           <Link
             href="/dashboard/listings/new"

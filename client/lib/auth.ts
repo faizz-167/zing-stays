@@ -6,8 +6,10 @@ export interface AuthUser {
   id: number;
   email: string;
   phone?: string | null;
-  name?: string;
-  isAdmin?: boolean;
+  name?: string | null;
+  emailVerified: boolean;
+  isPosterVerified: boolean;
+  isAdmin: boolean;
 }
 
 export interface AuthContextValue {
