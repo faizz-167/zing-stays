@@ -40,16 +40,35 @@ router.post('/', requireAuth, reviewPostLimiter, async (req: AuthRequest, res) =
       return;
     }
 
+    // Block owner self-review
+    const [listing] = await db
+      .select({ ownerId: listings.ownerId })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+
+    if (!listing) {
+      res.status(404).json({ error: 'Listing not found.' });
+      return;
+    }
+
+    if (listing.ownerId === userId) {
+      res.status(403).json({ error: 'Owners cannot review their own listing.' });
+      return;
+    }
+
     const [review] = await db
       .insert(reviews)
       .values({ userId, listingId, rating, body, status: 'pending' })
       .returning();
 
-    moderationQueue.add('moderate-review', { reviewId: review.id }).catch(
-      (err) => logger.error('moderationQueue add error', err),
-    );
-
-    res.status(201).json(review);
+    try {
+      await moderationQueue.add('moderate-review', { reviewId: review.id });
+      res.status(201).json(review);
+    } catch (queueErr) {
+      logger.error('moderationQueue add error', queueErr);
+      res.status(202).json({ ...review, queued: false });
+    }
   } catch (err: unknown) {
     // Unique constraint violation = duplicate review
     if (err instanceof Error && err.message.includes('unique')) {

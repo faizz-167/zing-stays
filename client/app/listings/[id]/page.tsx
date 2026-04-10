@@ -30,6 +30,7 @@ const AMENITY_LABELS: Record<string, string> = {
 
 interface Listing {
   id: number;
+  ownerId: number;
   title: string;
   locality: string;
   city: string;
@@ -47,6 +48,18 @@ interface Listing {
   ownerName?: string;
   localityId?: number;
   hasContacted?: boolean;
+}
+
+function decodeAuthCookie(token: string): { userId: number } | null {
+  try {
+    const [, payloadBase64] = token.split('.');
+    const json = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+    const payload = JSON.parse(json) as { userId?: unknown };
+    if (typeof payload.userId === 'number') return { userId: payload.userId };
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 async function getListing(id: string): Promise<Listing | null> {
@@ -69,6 +82,10 @@ export default async function ListingDetailPage({
   const { id } = await params;
   const listing = await getListing(id);
   if (!listing) notFound();
+
+  const cookieStore = await cookies();
+  const authToken = cookieStore.get('auth_token')?.value;
+  const authUser = authToken ? decodeAuthCookie(authToken) : null;
 
   const detailRows: [string, string][] = [
     ['Listing', listing.intent === 'buy' ? 'For Sale' : 'For Rent'],
@@ -146,11 +163,15 @@ export default async function ListingDetailPage({
             <ReviewList listingId={listing.id} apiBase={API_URL} />
           </div>
 
-          {listing.hasContacted && (
-            <div className="mt-6">
-              <ReviewForm listingId={listing.id} apiBase={API_URL} />
-            </div>
-          )}
+          <div className="mt-6">
+            <ReviewForm
+              listingId={listing.id}
+              listingOwnerId={listing.ownerId}
+              user={authUser ? { id: authUser.userId } : null}
+              hasContacted={listing.hasContacted ?? false}
+              apiBase={API_URL}
+            />
+          </div>
         </div>
 
         {/* Right — Sticky booking panel */}

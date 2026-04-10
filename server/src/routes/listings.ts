@@ -460,6 +460,10 @@ router.post('/:id/contact', requireAuth, contactRevealLimiter, async (req: AuthR
       res.status(404).json({ error: 'Not found' });
       return;
     }
+    if (listing.ownerId === req.user!.userId) {
+      res.status(403).json({ error: 'You cannot contact yourself.' });
+      return;
+    }
     await db
       .insert(contactLeads)
       .values({ userId: req.user!.userId, listingId: id })

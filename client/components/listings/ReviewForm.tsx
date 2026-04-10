@@ -1,10 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useCallback } from 'react';
 import { usePostHog } from 'posthog-js/react';
 
 interface ReviewFormProps {
   listingId: number;
+  listingOwnerId: number;
+  user: { id: number } | null;
+  hasContacted: boolean;
   apiBase?: string;
   onSubmitted?: () => void;
 }
@@ -39,12 +43,20 @@ function StarInput({ value, onChange }: { value: number; onChange: (n: number) =
   );
 }
 
-export default function ReviewForm({ listingId, apiBase = '/api', onSubmitted }: ReviewFormProps) {
+export default function ReviewForm({
+  listingId,
+  listingOwnerId,
+  user,
+  hasContacted,
+  apiBase = '/api',
+  onSubmitted,
+}: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState('');
   const posthog = usePostHog();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedDelayed, setSubmittedDelayed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
@@ -72,6 +84,12 @@ export default function ReviewForm({ listingId, apiBase = '/api', onSubmitted }:
           setError('You must contact the owner before reviewing.');
           return;
         }
+        if (res.status === 202) {
+          posthog?.capture('review_submitted', { listing_id: listingId, rating });
+          setSubmittedDelayed(true);
+          onSubmitted?.();
+          return;
+        }
         if (!res.ok) {
           const data = await res.json() as { error?: string };
           setError(data.error ?? 'Failed to submit review.');
@@ -90,11 +108,50 @@ export default function ReviewForm({ listingId, apiBase = '/api', onSubmitted }:
     [rating, body, listingId, apiBase, onSubmitted, posthog],
   );
 
+  if (!user) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm text-gray-600">
+          <Link href="/auth/login" className="font-medium text-blue-600 hover:underline">
+            Sign in
+          </Link>{' '}
+          to leave a review.
+        </p>
+      </div>
+    );
+  }
+
+  if (user.id === listingOwnerId) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm text-gray-500">Owners cannot review their own listing.</p>
+      </div>
+    );
+  }
+
+  if (!hasContacted) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm text-gray-600">Reveal the owner&apos;s contact to unlock reviews.</p>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="rounded-xl border border-green-200 bg-green-50 p-4">
         <p className="text-sm font-medium text-green-700">
           Review submitted — pending approval. Thank you!
+        </p>
+      </div>
+    );
+  }
+
+  if (submittedDelayed) {
+    return (
+      <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+        <p className="text-sm font-medium text-yellow-700">
+          Review received. It may take longer than usual to appear.
         </p>
       </div>
     );
