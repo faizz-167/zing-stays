@@ -13,9 +13,16 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const intentEnum = pgEnum('intent', ['buy', 'rent']);
-export const roomTypeEnum = pgEnum('room_type', ['single', 'double', 'shared']);
+export const roomTypeEnum = pgEnum('room_type', [
+  // For PG / Hostel
+  'single', 'double', 'multiple',
+  // For Apartment / Flat
+  '1bhk', '2bhk', '3bhk', '4bhk',
+]);
 export const propertyTypeEnum = pgEnum('property_type', ['pg', 'hostel', 'apartment', 'flat']);
 export const genderPrefEnum = pgEnum('gender_pref', ['male', 'female', 'any']);
+export const furnishingEnum = pgEnum('furnishing', ['furnished', 'semi', 'unfurnished']);
+export const preferredTenantsEnum = pgEnum('preferred_tenants', ['students', 'working', 'family', 'any']);
 export const listingStatusEnum = pgEnum('listing_status', ['draft', 'active', 'inactive']);
 export const contentTypeEnum = pgEnum('content_type', [
   'area_guide',
@@ -46,6 +53,13 @@ export const localities = pgTable('localities', {
 }, (t) => [
   uniqueIndex('localities_city_slug_idx').on(t.cityId, t.slug),
   index('localities_city_idx').on(t.cityId),
+]);
+
+export const localityNeighbors = pgTable('locality_neighbors', {
+  localityId: integer('locality_id').references(() => localities.id, { onDelete: 'cascade' }).notNull(),
+  neighborId: integer('neighbor_id').references(() => localities.id, { onDelete: 'cascade' }).notNull(),
+}, (t) => [
+  uniqueIndex('locality_neighbors_uniq').on(t.localityId, t.neighborId),
 ]);
 
 export const users = pgTable('users', {
@@ -81,6 +95,11 @@ export const listings = pgTable('listings', {
   propertyType: propertyTypeEnum('property_type').notNull(),
   foodIncluded: boolean('food_included').default(false).notNull(),
   genderPref: genderPrefEnum('gender_pref').default('any').notNull(),
+  deposit: integer('deposit'),
+  areaSqft: integer('area_sqft'),
+  availableFrom: timestamp('available_from'),
+  furnishing: furnishingEnum('furnishing'),
+  preferredTenants: preferredTenantsEnum('preferred_tenants').default('any').notNull(),
   amenities: jsonb('amenities').$type<string[]>().default([]).notNull(),
   rules: text('rules'),
   images: jsonb('images').$type<string[]>().default([]).notNull(),
@@ -166,6 +185,8 @@ export const priceSnapshots = pgTable('price_snapshots', {
 ]);
 
 // TypeScript types
+export type LocalityNeighbor = typeof localityNeighbors.$inferSelect;
+export type NewLocalityNeighbor = typeof localityNeighbors.$inferInsert;
 export type City = typeof cities.$inferSelect;
 export type NewCity = typeof cities.$inferInsert;
 export type Locality = typeof localities.$inferSelect;

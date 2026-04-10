@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { usePostHog } from 'posthog-js/react';
+import { reviewSchema, type ReviewFormValues } from '@/lib/schemas/review';
 
 interface ReviewFormProps {
   listingId: number;
@@ -51,62 +54,62 @@ export default function ReviewForm({
   apiBase = '/api',
   onSubmitted,
 }: ReviewFormProps) {
-  const [rating, setRating] = useState(0);
-  const [body, setBody] = useState('');
   const posthog = usePostHog();
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedDelayed, setSubmittedDelayed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (rating === 0) { setError('Please select a star rating.'); return; }
-      if (body.trim().length < 20) { setError('Review must be at least 20 characters.'); return; }
+  const {
+    control,
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<ReviewFormValues>({
+    resolver: zodResolver(reviewSchema),
+    defaultValues: { rating: 0, body: '' },
+  });
 
-      setSubmitting(true);
-      setError(null);
+  const bodyValue = watch('body');
 
-      try {
-        const res = await fetch(`${apiBase}/reviews`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ listingId, rating, body: body.trim() }),
-        });
+  const onSubmit = async (data: ReviewFormValues) => {
+    setServerError(null);
 
-        if (res.status === 409) {
-          setError('You have already reviewed this listing.');
-          return;
-        }
-        if (res.status === 403) {
-          setError('You must contact the owner before reviewing.');
-          return;
-        }
-        if (res.status === 202) {
-          posthog?.capture('review_submitted', { listing_id: listingId, rating });
-          setSubmittedDelayed(true);
-          onSubmitted?.();
-          return;
-        }
-        if (!res.ok) {
-          const data = await res.json() as { error?: string };
-          setError(data.error ?? 'Failed to submit review.');
-          return;
-        }
+    try {
+      const res = await fetch(`${apiBase}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ listingId, rating: data.rating, body: data.body.trim() }),
+      });
 
-        posthog?.capture('review_submitted', { listing_id: listingId, rating });
-        setSubmitted(true);
-        onSubmitted?.();
-      } catch {
-        setError('Network error. Please try again.');
-      } finally {
-        setSubmitting(false);
+      if (res.status === 409) {
+        setServerError('You have already reviewed this listing.');
+        return;
       }
-    },
-    [rating, body, listingId, apiBase, onSubmitted, posthog],
-  );
+      if (res.status === 403) {
+        setServerError('You must contact the owner before reviewing.');
+        return;
+      }
+      if (res.status === 202) {
+        posthog?.capture('review_submitted', { listing_id: listingId, rating: data.rating });
+        setSubmittedDelayed(true);
+        onSubmitted?.();
+        return;
+      }
+      if (!res.ok) {
+        const json = await res.json() as { error?: string };
+        setServerError(json.error ?? 'Failed to submit review.');
+        return;
+      }
+
+      posthog?.capture('review_submitted', { listing_id: listingId, rating: data.rating });
+      setSubmitted(true);
+      onSubmitted?.();
+    } catch {
+      setServerError('Network error. Please try again.');
+    }
+  };
 
   if (!user) {
     return (
@@ -158,12 +161,21 @@ export default function ReviewForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <h4 className="mb-4 text-sm font-semibold text-gray-800">Write a Review</h4>
 
       <div className="mb-3">
         <label className="mb-1.5 block text-xs font-medium text-gray-600">Your Rating</label>
-        <StarInput value={rating} onChange={setRating} />
+        <Controller
+          name="rating"
+          control={control}
+          render={({ field }) => (
+            <StarInput value={field.value} onChange={field.onChange} />
+          )}
+        />
+        {errors.rating && (
+          <p className="mt-1 text-xs text-red-600">{errors.rating.message}</p>
+        )}
       </div>
 
       <div className="mb-3">
@@ -171,25 +183,27 @@ export default function ReviewForm({
           Your Review <span className="text-gray-400">(min 20 characters)</span>
         </label>
         <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          {...register('body')}
           rows={4}
           placeholder="Share your experience with this property…"
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         />
-        <p className="mt-0.5 text-right text-xs text-gray-400">{body.trim().length} chars</p>
+        <p className="mt-0.5 text-right text-xs text-gray-400">{bodyValue.trim().length} chars</p>
+        {errors.body && (
+          <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>
+        )}
       </div>
 
-      {error && (
-        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
+      {serverError && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{serverError}</p>
       )}
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={isSubmitting}
         className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
       >
-        {submitting ? 'Submitting…' : 'Submit Review'}
+        {isSubmitting ? 'Submitting…' : 'Submit Review'}
       </button>
     </form>
   );

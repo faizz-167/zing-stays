@@ -13,7 +13,7 @@ export interface SearchFilterInput {
   cityId?: number;
   localityId?: number;
   intent?: 'buy' | 'rent';
-  roomType?: 'single' | 'double' | 'shared';
+  roomType?: 'single' | 'double' | 'multiple' | '1bhk' | '2bhk' | '3bhk' | '4bhk';
   propertyType?: 'pg' | 'hostel' | 'apartment' | 'flat';
   foodIncluded?: 'true' | 'false';
   gender?: 'male' | 'female' | 'any';
