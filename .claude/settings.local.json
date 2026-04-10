@@ -38,7 +38,13 @@
       "Bash(grep -n \"const { city, locality\" /d/Developer/zingBizz/zingbrokers/client/app/\\\\[city\\\\]/\\\\[locality\\\\]/page.tsx)",
       "Bash(ls -d .worktrees)",
       "Bash(ls -d worktrees)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git worktree:*)",
+      "Bash(npx tsx:*)",
+      "Bash(gh pr create --title 'feat: Phase 2 — Schema cleanup & foundation' --body ':*)",
+      "Bash(where gh:*)",
+      "Bash(winget list:*)"
     ]
   }
 }

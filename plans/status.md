@@ -21,7 +21,7 @@
 | Phase | Title | Status | Notes |
 |-------|-------|--------|-------|
 | 1 | Security & Review Fixes | `COMPLETED` | Highest priority — do first |
-| 2 | Schema Cleanup & Foundation | `NOT_STARTED` | Depends on Phase 1 |
+| 2 | Schema Cleanup & Foundation | `COMPLETED` | Depends on Phase 1 |
 | 3 | Authentication Redesign | `NOT_STARTED` | Depends on Phase 2 |
 | 4 | Guided Search Widget | `NOT_STARTED` | Depends on Phase 3 |
 | 5 | Filter Panel Redesign | `NOT_STARTED` | Depends on Phase 4 |
@@ -45,13 +45,13 @@
 
 | Subtask | Status | Notes |
 |---------|--------|-------|
-| 2.1 Update `roomTypeEnum` for BHK + occupancy types | `NOT_STARTED` | New values: 1bhk, 2bhk, 3bhk, 4bhk, single, double, multiple |
-| 2.2 Add `deposit`, `area`, `availableFrom`, `furnishing` to listings schema | `NOT_STARTED` | New columns for richer listing cards |
-| 2.3 Add `nearbyLocalityId` relation to localities table | `NOT_STARTED` | For nearby locality suggestions |
-| 2.4 Run fresh DB migration (DB is being reset) | `NOT_STARTED` | Drop all, push new schema |
-| 2.5 Migrate all forms to `react-hook-form` + Zod | `NOT_STARTED` | login, register, listing form, profile, review, content editor |
-| 2.6 Fix URL/state sync in search (empty state + URL reset) | `NOT_STARTED` | Clear search must update URL; listing page must reset on empty |
-| 2.7 Standardize UI primitives (Button, Input, Badge, Chip) | `NOT_STARTED` | Extract reusable Chip component; ensure consistent usage |
+| 2.1 Update `roomTypeEnum` for BHK + occupancy types | `COMPLETED` | New values: 1bhk, 2bhk, 3bhk, 4bhk, single, double, multiple |
+| 2.2 Add `deposit`, `area`, `availableFrom`, `furnishing` to listings schema | `COMPLETED` | New columns for richer listing cards |
+| 2.3 Add `nearbyLocalityId` relation to localities table | `COMPLETED` | localityNeighbors join table added |
+| 2.4 Run fresh DB migration (DB is being reset) | `COMPLETED` | Drop all, push new schema, seeded 2 cities + localities + admin |
+| 2.5 Migrate all forms to `react-hook-form` + Zod | `COMPLETED` | ReviewForm, ListingForm, ContentEditor migrated; schemas in lib/schemas/ |
+| 2.6 Fix URL/state sync in search (empty state + URL reset) | `COMPLETED` | SearchBar now navigates to /listings on empty query |
+| 2.7 Standardize UI primitives (Button, Input, Badge, Chip) | `COMPLETED` | Chip component created with selectable + removable variants |
 
 ---
 
@@ -143,3 +143,4 @@
 | Date | Phase | Subtask | Agent | Notes |
 |------|-------|---------|-------|-------|
 | 2026-04-10 | 1 | 1.1–1.4 | claude-sonnet-4-6 | All Phase 1 subtasks complete |
+| 2026-04-10 | 2 | 2.1–2.7 | claude-sonnet-4-6 | All Phase 2 subtasks complete |
