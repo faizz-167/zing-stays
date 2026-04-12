@@ -236,10 +236,8 @@ function GuidesSection({ guides, cityName }: { guides: GuideSummary[]; cityName:
 
 function WidgetsSection({
   localityId,
-  avgPrice,
 }: {
   localityId: number;
-  avgPrice: number;
 }) {
   return (
     <div className="grid lg:grid-cols-2 gap-6 items-start">
@@ -327,7 +325,7 @@ export default async function LocalityPage({
 
         <GuidesSection guides={guides} cityName={city.name} />
 
-        <WidgetsSection localityId={locality.id} avgPrice={stats.avgPrice} />
+        <WidgetsSection localityId={locality.id} />
 
         {nearbyLocalities.length > 0 && (
           <LocalityLinks citySlug={city.slug} localities={nearbyLocalities} />

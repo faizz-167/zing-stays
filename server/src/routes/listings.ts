@@ -42,6 +42,7 @@ const listingResponseColumns = {
   locality: localities.name,
   citySlug: cities.slug,
   localitySlug: localities.slug,
+  ownerVerified: users.isPosterVerified,
 };
 
 async function resolveListingLocation(
@@ -104,6 +105,7 @@ async function getListingWithLocationById(id: number) {
   return db
     .select(listingResponseColumns)
     .from(listings)
+    .leftJoin(users, eq(listings.ownerId, users.id))
     .leftJoin(cities, eq(listings.cityId, cities.id))
     .leftJoin(localities, eq(listings.localityId, localities.id))
     .where(eq(listings.id, id))
@@ -111,10 +113,18 @@ async function getListingWithLocationById(id: number) {
     .then(rows => rows[0]);
 }
 
-function enrichWithBadges<T extends { city: string | null; locality: string | null; completenessScore: number; updatedAt: Date }>(listing: T) {
+function enrichWithBadges<
+  T extends {
+    city: string | null;
+    locality: string | null;
+    ownerVerified?: boolean | null;
+    completenessScore: number;
+    updatedAt: Date;
+  },
+>(listing: T) {
   return {
     ...withDisplayLocation(listing),
-    badges: getTrustBadges(listing as unknown as Parameters<typeof getTrustBadges>[0]),
+    badges: getTrustBadges(listing),
   };
 }
 
@@ -148,6 +158,7 @@ router.get('/', async (req, res) => {
     const rows = await db
       .select(listingResponseColumns)
       .from(listings)
+      .leftJoin(users, eq(listings.ownerId, users.id))
       .leftJoin(cities, eq(listings.cityId, cities.id))
       .leftJoin(localities, eq(listings.localityId, localities.id))
       .where(and(...conditions))
@@ -173,6 +184,7 @@ router.get('/mine', requireAuth, async (req: AuthRequest, res) => {
     const rows = await db
       .select(listingResponseColumns)
       .from(listings)
+      .leftJoin(users, eq(listings.ownerId, users.id))
       .leftJoin(cities, eq(listings.cityId, cities.id))
       .leftJoin(localities, eq(listings.localityId, localities.id))
       .where(eq(listings.ownerId, req.user!.userId))

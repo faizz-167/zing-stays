@@ -51,9 +51,15 @@ export function calculateCompleteness(listing: Partial<Listing>): number {
   return Math.min(100, score);
 }
 
-export function getTrustBadges(listing: Listing): string[] {
+export interface TrustBadgeSource {
+  ownerVerified?: boolean | null;
+  completenessScore: number;
+  updatedAt: Date;
+}
+
+export function getTrustBadges(listing: TrustBadgeSource): string[] {
   const badges: string[] = [];
-  badges.push('verified_owner');
+  if (listing.ownerVerified) badges.push('verified_owner');
   if (listing.completenessScore >= 80) badges.push('well_detailed');
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   if (listing.updatedAt > thirtyDaysAgo) badges.push('recently_updated');

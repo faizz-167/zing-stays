@@ -10,6 +10,7 @@ interface ContentPageSummary {
   slug: string;
   type: string;
   title: string;
+  isPublished: boolean;
   cityId: number | null;
   localityId: number | null;
   publishedAt: string | null;
@@ -61,7 +62,7 @@ export default function AdminContentPage() {
                   {' · '}
                   {TYPE_LABELS[page.type] ?? page.type}
                   {' · '}
-                  {page.publishedAt ? (
+                  {page.isPublished ? (
                     <span className="text-green-600">Published</span>
                   ) : (
                     <span className="text-yellow-600">Draft</span>

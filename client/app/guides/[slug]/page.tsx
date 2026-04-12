@@ -88,18 +88,34 @@ function escapeHtml(str: string): string {
  * renders as visible text rather than executing.
  */
 function renderMarkdown(md: string): string {
-  const safe = escapeHtml(md);
-  return safe
-    .replace(/^### (.+)$/gm, '<h3 class="font-display text-xl mt-6 mb-2">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="font-display text-2xl mt-8 mb-3">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="font-display text-3xl mt-8 mb-4">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\n\n/g, '</p><p class="mb-4">')
-    .replace(/^(?!<[hH])(.+)$/gm, (line) => {
-      if (line.trim() === '' || line.startsWith('<')) return line;
-      return `<p class="mb-4">${line}</p>`;
-    });
+  const renderInline = (value: string) =>
+    escapeHtml(value)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  return md
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      if (block.startsWith('### ')) {
+        return `<h3 class="font-display text-xl mt-6 mb-2">${renderInline(block.slice(4))}</h3>`;
+      }
+      if (block.startsWith('## ')) {
+        return `<h2 class="font-display text-2xl mt-8 mb-3">${renderInline(block.slice(3))}</h2>`;
+      }
+      if (block.startsWith('# ')) {
+        return `<h1 class="font-display text-3xl mt-8 mb-4">${renderInline(block.slice(2))}</h1>`;
+      }
+
+      const paragraph = block
+        .split('\n')
+        .map((line) => renderInline(line.trim()))
+        .join('<br />');
+
+      return `<p class="mb-4">${paragraph}</p>`;
+    })
+    .join('');
 }
 
 export default async function GuidePage({

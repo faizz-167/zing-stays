@@ -25,9 +25,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const { data, isPending, refetch } = authClient.useSession();
   const user = mapUser((data?.user ?? null) as Record<string, unknown> | null);
 
-  const login = useCallback((_user: AuthUser) => {
+  const login = useCallback((nextUser: AuthUser) => {
+    void nextUser;
     void refetch();
-  }, []);
+  }, [refetch]);
 
   const logout = useCallback(async () => {
     await authClient.signOut();

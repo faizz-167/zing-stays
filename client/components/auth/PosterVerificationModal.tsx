@@ -105,7 +105,7 @@ export default function PosterVerificationModal({ onSuccess, onClose }: PosterVe
         {(step === 'otp-send') && (
           <div className="space-y-4">
             <p className="font-sans text-sm text-muted-foreground">
-              We'll send a 6-digit code to <strong>{user?.email}</strong> to verify your email address.
+              We&apos;ll send a 6-digit code to <strong>{user?.email}</strong> to verify your email address.
             </p>
             {error && <p className="font-sans text-sm text-red-600">{error}</p>}
             <Button className="w-full" onClick={sendOtp} disabled={loading}>

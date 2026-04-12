@@ -21,9 +21,10 @@ export function runCompletenessTests(): void {
   assert.equal(score, 100);
 
   const listing = {
+    ownerVerified: true,
     completenessScore: 84,
     updatedAt: new Date(),
-  } as Listing;
+  };
 
   assert.deepEqual(getTrustBadges(listing), [
     'verified_owner',
@@ -32,9 +33,10 @@ export function runCompletenessTests(): void {
   ]);
 
   const staleListing = {
+    ownerVerified: false,
     completenessScore: 40,
     updatedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
-  } as Listing;
+  };
 
-  assert.deepEqual(getTrustBadges(staleListing), ['verified_owner']);
+  assert.deepEqual(getTrustBadges(staleListing), []);
 }

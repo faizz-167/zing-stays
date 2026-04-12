@@ -31,9 +31,12 @@ export default function BudgetBandLinks({
     if (citySlug && localitySlug) {
       return `/${citySlug}/${localitySlug}/under-${band}`;
     }
-    const params = new URLSearchParams({ cityId: String(cityId) });
+    const params = new URLSearchParams({
+      cityId: String(cityId),
+      intent: 'rent',
+      maxPrice: String(band),
+    });
     if (localityId) params.set('localityId', String(localityId));
-    params.set('price_max', String(band));
     return `/listings?${params.toString()}`;
   }
 

@@ -67,29 +67,43 @@ export default function GuidedSearchWidget() {
   // Fetch localities when city changes
   useEffect(() => {
     if (!selectedCity) {
-      setCityLocalities([]);
-      setSelectedLocalities([]);
-      setNearbyLocalities([]);
       return;
     }
+
+    let cancelled = false;
     api
       .get<{ data: Locality[] }>(`/localities?cityId=${selectedCity.id}`)
-      .then(d => setCityLocalities(d.data ?? []))
+      .then((d) => {
+        if (!cancelled) {
+          setCityLocalities(d.data ?? []);
+        }
+      })
       .catch(() => {});
-    setSelectedLocalities([]);
-    setNearbyLocalities([]);
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedCity]);
 
   // Fetch nearby after first locality is selected
   useEffect(() => {
     if (selectedLocalities.length === 0) {
-      setNearbyLocalities([]);
       return;
     }
+
+    let cancelled = false;
     api
       .get<{ nearby: Locality[] }>(`/places/nearby?localityId=${selectedLocalities[0].id}`)
-      .then(d => setNearbyLocalities(d.nearby ?? []))
+      .then((d) => {
+        if (!cancelled) {
+          setNearbyLocalities(d.nearby ?? []);
+        }
+      })
       .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedLocalities]);
 
   const handleIntentChange = (newIntent: 'rent' | 'buy') => {
@@ -127,7 +141,13 @@ export default function GuidedSearchWidget() {
   };
 
   const removeLocality = (id: number) => {
-    setSelectedLocalities(prev => prev.filter(l => l.id !== id));
+    setSelectedLocalities((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      if (next.length === 0) {
+        setNearbyLocalities([]);
+      }
+      return next;
+    });
   };
 
   const toggleRoomType = (rt: string) => {
@@ -175,6 +195,11 @@ export default function GuidedSearchWidget() {
           onChange={e => {
             const city = cities.find(c => c.id === Number(e.target.value)) ?? null;
             setSelectedCity(city);
+            setCityLocalities([]);
+            setSelectedLocalities([]);
+            setNearbyLocalities([]);
+            setLocalityInput('');
+            setShowDropdown(false);
           }}
           className="flex-shrink-0 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { cities, localities, listings } from '../db/schema';
+import { cities, localities, listings, users } from '../db/schema';
 import { eq, and, count, avg, min, max, desc, SQL } from 'drizzle-orm';
 import { getTrustBadges } from './completeness';
 
@@ -56,6 +56,7 @@ export const LISTING_CARD_COLUMNS = {
   roomType: listings.roomType,
   images: listings.images,
   foodIncluded: listings.foodIncluded,
+  ownerVerified: users.isPosterVerified,
   completenessScore: listings.completenessScore,
   updatedAt: listings.updatedAt,
 } as const;
@@ -82,15 +83,16 @@ export async function queryListingCards(conditions: SQL[], limit = 12): Promise<
   const rows = await db
     .select(LISTING_CARD_COLUMNS)
     .from(listings)
+    .innerJoin(users, eq(listings.ownerId, users.id))
     .innerJoin(cities, eq(listings.cityId, cities.id))
     .innerJoin(localities, eq(listings.localityId, localities.id))
     .where(and(...conditions))
     .orderBy(desc(listings.createdAt))
     .limit(limit);
 
-  return rows.map(({ completenessScore, updatedAt, ...rest }) => ({
+  return rows.map(({ ownerVerified, completenessScore, updatedAt, ...rest }) => ({
     ...rest,
-    badges: getTrustBadges({ completenessScore, updatedAt } as Parameters<typeof getTrustBadges>[0]),
+    badges: getTrustBadges({ ownerVerified, completenessScore, updatedAt }),
   }));
 }
 

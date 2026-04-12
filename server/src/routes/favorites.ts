@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { favorites, listings, cities, localities } from '../db/schema';
+import { favorites, listings, cities, localities, users } from '../db/schema';
 import { eq, and, desc, getTableColumns } from 'drizzle-orm';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { getTrustBadges } from '../services/completeness';
@@ -12,6 +12,7 @@ const favoriteListingColumns = {
   ...getTableColumns(listings),
   city: cities.name,
   locality: localities.name,
+  ownerVerified: users.isPosterVerified,
 };
 
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
@@ -20,6 +21,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       .select(favoriteListingColumns)
       .from(favorites)
       .innerJoin(listings, eq(favorites.listingId, listings.id))
+      .innerJoin(users, eq(listings.ownerId, users.id))
       .leftJoin(cities, eq(listings.cityId, cities.id))
       .leftJoin(localities, eq(listings.localityId, localities.id))
       .where(eq(favorites.userId, req.user!.userId))

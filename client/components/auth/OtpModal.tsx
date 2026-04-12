@@ -41,7 +41,7 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
     setError('');
     setLoading(true);
     try {
-      await api.post('/auth/send-otp', { email });
+      await api.post('/auth/email-otp/send-verification-otp', { email, type: 'sign-in' });
       setEmail(email);
       setStep('otp');
     } catch (err: unknown) {
@@ -56,8 +56,8 @@ export default function OtpModal({ onSuccess, onClose }: OtpModalProps) {
     setLoading(true);
     try {
       const res = await api.post<{ user: Parameters<typeof login>[0] }>(
-        '/auth/verify-otp',
-        { email, code },
+        '/auth/sign-in/email-otp',
+        { email, otp: code },
       );
       login(res.user);
       onSuccess?.();

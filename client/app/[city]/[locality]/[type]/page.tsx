@@ -184,7 +184,9 @@ export default async function TypePage({
         {priceRange.min > 0 && (
           <BudgetBandLinks
             cityId={city.id}
+            citySlug={city.slug}
             localityId={locality.id}
+            localitySlug={locality.slug}
             minPrice={priceRange.min}
             maxPrice={priceRange.max}
           />

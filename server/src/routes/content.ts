@@ -198,11 +198,12 @@ router.put('/:id', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     if (!existing) { res.status(404).json({ error: 'Page not found' }); return; }
 
     const willPublish = result.data.isPublished === true && !existing.isPublished;
+    const willUnpublish = result.data.isPublished === false && existing.isPublished;
     const [page] = await db
       .update(contentPages)
       .set({
         ...result.data,
-        publishedAt: willPublish ? new Date() : existing.publishedAt,
+        publishedAt: willPublish ? new Date() : willUnpublish ? null : existing.publishedAt,
         updatedAt: new Date(),
       })
       .where(eq(contentPages.id, id))

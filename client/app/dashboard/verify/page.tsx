@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,10 +24,13 @@ export default function VerifyPage() {
   const otpForm = useForm<OtpInput>({ resolver: zodResolver(otpSchema) });
   const phoneForm = useForm<PhoneInput>({ resolver: zodResolver(phoneSchema) });
 
-  if (user?.isPosterVerified) {
-    router.replace('/dashboard/listings/new');
-    return null;
-  }
+  useEffect(() => {
+    if (user?.isPosterVerified) {
+      router.replace('/dashboard/listings/new');
+    }
+  }, [router, user?.isPosterVerified]);
+
+  if (user?.isPosterVerified) return null;
 
   const sendOtp = async () => {
     setError('');
@@ -104,7 +107,7 @@ export default function VerifyPage() {
           {step === 'otp-send' && (
             <div className="space-y-4">
               <p className="font-sans text-sm text-muted-foreground">
-                We'll send a 6-digit code to <strong>{user?.email}</strong> to verify your email address.
+                We&apos;ll send a 6-digit code to <strong>{user?.email}</strong> to verify your email address.
               </p>
               {error && <p className="font-sans text-sm text-red-600">{error}</p>}
               <Button className="w-full" onClick={sendOtp} disabled={loading}>
