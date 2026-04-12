@@ -7,6 +7,8 @@ import { searchIndexQueue } from '../lib/queues';
 import { logger } from '../lib/logger';
 import { parseIntParam, withDisplayLocation } from '../lib/routeUtils';
 import { invalidateListingCaches } from '../lib/listingCache';
+import { asyncHandler } from '../lib/asyncHandler';
+import { ValidationError, NotFoundError } from '../lib/errors';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
@@ -17,52 +19,38 @@ const adminListingColumns = {
   locality: localities.name,
 };
 
-router.get('/listings', async (_req, res) => {
-  try {
-    const rows = await db
-      .select(adminListingColumns)
-      .from(listings)
-      .leftJoin(cities, eq(listings.cityId, cities.id))
-      .leftJoin(localities, eq(listings.localityId, localities.id))
-      .orderBy(desc(listings.createdAt))
-      .limit(100);
-    res.json({
-      data: rows.map(withDisplayLocation),
-    });
-  } catch (err) {
-    logger.error('admin listings error', err);
-    res.status(500).json({ error: 'Failed to fetch listings' });
-  }
-});
+router.get('/listings', asyncHandler(async (_req, res) => {
+  const rows = await db
+    .select(adminListingColumns)
+    .from(listings)
+    .leftJoin(cities, eq(listings.cityId, cities.id))
+    .leftJoin(localities, eq(listings.localityId, localities.id))
+    .orderBy(desc(listings.createdAt))
+    .limit(100);
+  res.json({ data: rows.map(withDisplayLocation) });
+}));
 
-router.put('/listings/:id/status', async (req: AuthRequest, res) => {
+router.put('/listings/:id/status', asyncHandler(async (req: AuthRequest, res) => {
   const id = parseIntParam(req, res, 'id');
   if (id === null) return;
+
   const { status } = req.body;
   if (!['active', 'inactive', 'draft'].includes(status)) {
-    res.status(400).json({ error: 'Invalid status' }); return;
+    throw new ValidationError('Invalid status');
   }
-  try {
-    const [updated] = await db.update(listings)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(listings.id, id))
-      .returning();
-    if (!updated) { res.status(404).json({ error: 'Listing not found' }); return; }
-    if (status === 'inactive') {
-      searchIndexQueue.add('index-listing', { listingId: id, action: 'delete' }).catch(
-        (err) => logger.error('searchIndexQueue add error', err),
-      );
-    } else {
-      searchIndexQueue.add('index-listing', { listingId: updated.id, action: 'upsert' }).catch(
-        (err) => logger.error('searchIndexQueue add error', err),
-      );
-    }
-    await invalidateListingCaches(id);
-    res.json(updated);
-  } catch (err) {
-    logger.error('admin status error', err);
-    res.status(500).json({ error: 'Failed to update listing status' });
-  }
-});
+
+  const [updated] = await db.update(listings)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(listings.id, id))
+    .returning();
+  if (!updated) throw new NotFoundError('Listing not found');
+
+  const action = status === 'inactive' ? 'delete' : 'upsert';
+  searchIndexQueue.add('index-listing', { listingId: id, action }).catch(
+    (err) => logger.error('searchIndexQueue add error', err),
+  );
+  await invalidateListingCaches(id);
+  res.json(updated);
+}));
 
 export default router;

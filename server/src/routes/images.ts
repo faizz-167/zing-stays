@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { getAuthParams } from '../services/imagekit';
 import { requireAuth, type AuthRequest } from '../middleware/auth';
 import { imageAuthLimiter } from '../middleware/rateLimit';
-import { logger } from '../lib/logger';
+import { asyncHandler } from '../lib/asyncHandler';
+import { ValidationError } from '../lib/errors';
 
 const router = Router();
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -27,34 +28,27 @@ function sanitizeFileName(originalFileName: string): string {
 }
 
 // POST /api/images/auth — ImageKit client-side upload auth params
-router.post('/auth', requireAuth, imageAuthLimiter, (req: AuthRequest, res) => {
+router.post('/auth', requireAuth, imageAuthLimiter, asyncHandler(async (req: AuthRequest, res) => {
   const result = imageAuthSchema.safeParse(req.body);
   if (!result.success) {
-    res.status(400).json({ error: result.error.issues[0]?.message ?? 'Invalid upload request' });
-    return;
+    throw new ValidationError(result.error.issues[0]?.message ?? 'Invalid upload request');
   }
 
   if (result.data.existingImageCount + 1 > MAX_TOTAL_IMAGES) {
-    res.status(400).json({ error: `A listing can include up to ${MAX_TOTAL_IMAGES} images.` });
-    return;
+    throw new ValidationError(`A listing can include up to ${MAX_TOTAL_IMAGES} images.`);
   }
 
-  try {
-    const folder = `/listings/user-${req.user!.userId}`;
-    const expire = Math.floor(Date.now() / 1000) + 5 * 60;
-    const token = `${req.user!.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const params = getAuthParams(token, expire);
+  const folder = `/listings/user-${req.user!.userId}`;
+  const expire = Math.floor(Date.now() / 1000) + 5 * 60;
+  const token = `${req.user!.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const params = getAuthParams(token, expire);
 
-    res.setHeader('Cache-Control', 'no-store');
-    res.json({
-      ...params,
-      folder,
-      fileName: sanitizeFileName(result.data.originalFileName),
-    });
-  } catch (err) {
-    logger.error('ImageKit auth error', err);
-    res.status(500).json({ error: 'Failed to get upload params' });
-  }
-});
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    ...params,
+    folder,
+    fileName: sanitizeFileName(result.data.originalFileName),
+  });
+}));
 
 export default router;

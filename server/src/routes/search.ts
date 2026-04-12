@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { listingsIndex } from '../services/search';
 import { buildSearchFilters, normalizeSortField } from '../lib/searchFilters';
 import { searchLimiter } from '../middleware/rateLimit';
-import { logger } from '../lib/logger';
 import { roomTypeValues } from '../lib/listingFields';
 import { toIntArray, toStringArray } from '../lib/routeUtils';
+import { asyncHandler } from '../lib/asyncHandler';
+import { ValidationError } from '../lib/errors';
 
 const router = Router();
-
 
 const searchQuerySchema = z.object({
   q: z.string().max(200).default(''),
@@ -17,78 +17,52 @@ const searchQuerySchema = z.object({
   cityId: z.coerce.number().int().positive().optional(),
   city_id: z.coerce.number().int().positive().optional(),
   intent: z.enum(['buy', 'rent']).optional(),
-  // Single room type (backward compat)
   room_type: z.enum(roomTypeValues).optional(),
   property_type: z.enum(['pg', 'hostel', 'apartment', 'flat']).optional(),
   food_included: z.enum(['true', 'false']).optional(),
   foodIncluded: z.enum(['true', 'false']).optional(),
   gender: z.enum(['male', 'female', 'any']).optional(),
   genderPref: z.enum(['male', 'female', 'any']).optional(),
-  // Legacy price params
   price_min: z.coerce.number().int().positive().optional(),
   price_max: z.coerce.number().int().positive().optional(),
-  // New price params
   minPrice: z.coerce.number().int().positive().optional(),
   maxPrice: z.coerce.number().int().positive().optional(),
-  // New filter params
   availability: z.enum(['now', 'soon', 'any']).optional(),
   sort: z.string().optional().transform((value) => normalizeSortField(value)),
 });
 
 // GET /api/search
-router.get('/', searchLimiter, async (req, res) => {
+router.get('/', searchLimiter, asyncHandler(async (req, res) => {
   const parsed = searchQuerySchema.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0].message }); return;
-  }
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0].message);
 
   const {
-    q,
-    city,
-    locality,
-    cityId,
-    city_id,
-    intent,
-    room_type,
-    property_type,
-    food_included,
-    foodIncluded,
-    gender,
-    genderPref,
-    price_min,
-    price_max,
-    minPrice,
-    maxPrice,
-    availability,
-    sort,
+    q, city, locality, cityId, city_id, intent, room_type,
+    property_type, food_included, foodIncluded, gender, genderPref,
+    price_min, price_max, minPrice, maxPrice, availability, sort,
   } = parsed.data;
 
   // Parse multi-value params that Zod can't handle natively (repeated keys)
   const localityIds = toIntArray(req.query['localityId']);
-  // Also check legacy locality_id param
   const localityIdLegacy = toIntArray(req.query['locality_id']);
   const resolvedLocalityIds = localityIds ?? localityIdLegacy;
 
-  // roomType (camelCase, multi-value) from new widget
   const rawRoomTypes = toStringArray(req.query['roomType']);
   const validRoomTypes = rawRoomTypes?.filter(
     (rt): rt is (typeof roomTypeValues)[number] => roomTypeValues.includes(rt as (typeof roomTypeValues)[number]),
   );
 
-  // Merge room type sources: new multi-value roomType takes precedence over legacy room_type
   const effectiveRoomType = validRoomTypes && validRoomTypes.length > 0
     ? validRoomTypes
     : room_type
       ? [room_type]
       : undefined;
 
-  // Multi-value propertyType (Phase 5 filter panel sends array)
   const rawPropertyTypes = toStringArray(req.query['propertyType']);
   const validPropertyTypes = rawPropertyTypes?.filter(
     (pt): pt is 'pg' | 'hostel' | 'apartment' | 'flat' =>
       ['pg', 'hostel', 'apartment', 'flat'].includes(pt),
   );
-  // Fall back to legacy property_type single param
   const effectivePropertyTypes =
     validPropertyTypes && validPropertyTypes.length > 0
       ? validPropertyTypes
@@ -96,7 +70,6 @@ router.get('/', searchLimiter, async (req, res) => {
         ? [property_type]
         : undefined;
 
-  // New multi-value params (Phase 5) — constrained to schema enum values
   const VALID_PREFERRED_TENANTS = ['students', 'working', 'family', 'any'] as const;
   const VALID_FURNISHING = ['furnished', 'semi', 'unfurnished'] as const;
 
@@ -111,33 +84,19 @@ router.get('/', searchLimiter, async (req, res) => {
   );
 
   const filters = buildSearchFilters({
-    city,
-    locality,
-    cityId: cityId ?? city_id,
-    localityIds: resolvedLocalityIds,
-    intent,
-    roomType: effectiveRoomType as (typeof roomTypeValues)[number][] | undefined,
-    propertyType: effectivePropertyTypes,
-    foodIncluded: foodIncluded ?? food_included,
-    gender: genderPref ?? gender,
-    priceMin: minPrice ?? price_min,
-    priceMax: maxPrice ?? price_max,
-    availability,
-    preferredTenants,
-    furnishing,
+    city, locality, cityId: cityId ?? city_id, localityIds: resolvedLocalityIds,
+    intent, roomType: effectiveRoomType as (typeof roomTypeValues)[number][] | undefined,
+    propertyType: effectivePropertyTypes, foodIncluded: foodIncluded ?? food_included,
+    gender: genderPref ?? gender, priceMin: minPrice ?? price_min,
+    priceMax: maxPrice ?? price_max, availability, preferredTenants, furnishing,
   });
 
-  try {
-    const results = await listingsIndex.search(q, {
-      filter: filters.join(' AND '),
-      sort: [sort],
-      limit: 30,
-    });
-    res.json(results);
-  } catch (err) {
-    logger.error('Search error', err);
-    res.status(500).json({ error: 'Search unavailable' });
-  }
-});
+  const results = await listingsIndex.search(q, {
+    filter: filters.join(' AND '),
+    sort: [sort],
+    limit: 30,
+  });
+  res.json(results);
+}));
 
 export default router;

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { sql } from 'drizzle-orm';
 import { toNodeHandler } from 'better-auth/node';
 import { logger } from './lib/logger';
+import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -115,10 +116,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled error', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
+app.use(errorHandler);
 
 async function bootstrap(): Promise<void> {
   try {

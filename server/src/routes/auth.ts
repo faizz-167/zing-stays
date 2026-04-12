@@ -6,7 +6,8 @@ import { users } from '../db/schema';
 import { sendOtp, verifyOtp } from '../services/otp';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { otpSendLimiter, otpVerifyLimiter } from '../middleware/rateLimit';
-import { logger } from '../lib/logger';
+import { asyncHandler } from '../lib/asyncHandler';
+import { ValidationError, NotFoundError, AppError } from '../lib/errors';
 
 const router = Router();
 
@@ -48,116 +49,74 @@ function userPayload(user: {
   };
 }
 
-router.post('/send-otp', requireAuth, otpSendLimiter, async (req: AuthRequest, res) => {
+router.post('/send-otp', requireAuth, otpSendLimiter, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
+  const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) throw new NotFoundError('User not found');
+
   try {
-    const userId = req.user!.userId;
-    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
     await sendOtp(user.email);
-    res.json({ message: 'OTP sent successfully' });
   } catch (err) {
-    logger.error('OTP send error', err);
     const message = err instanceof Error ? err.message : 'Failed to send OTP';
-    const status = message.includes('wait before requesting') ? 429 : 500;
-    res.status(status).json({ error: message });
+    throw message.includes('wait before requesting') ? new AppError(429, message) : new AppError(500, message);
   }
-});
+  res.json({ message: 'OTP sent successfully' });
+}));
 
-router.post('/verify-otp', requireAuth, otpVerifyLimiter, async (req: AuthRequest, res) => {
+router.post('/verify-otp', requireAuth, otpVerifyLimiter, asyncHandler(async (req: AuthRequest, res) => {
   const result = verifyOtpSchema.safeParse(req.body);
-  if (!result.success) {
-    res.status(400).json({ error: 'Invalid request' });
-    return;
-  }
+  if (!result.success) throw new ValidationError('Invalid request');
 
-  try {
-    const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
+  const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+  if (!user) throw new NotFoundError('User not found');
 
-    const valid = await verifyOtp(user.email, result.data.code);
-    if (!valid) {
-      res.status(401).json({ error: 'Invalid or expired OTP' });
-      return;
-    }
+  const valid = await verifyOtp(user.email, result.data.code);
+  if (!valid) throw new AppError(401, 'Invalid or expired OTP');
 
-    const [updated] = await db
-      .update(users)
-      .set({
-        posterEmailVerified: true,
-        isPosterVerified: Boolean(user.phone),
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, req.user!.userId))
-      .returning();
-
-    res.json({ user: userPayload(updated) });
-  } catch (err) {
-    logger.error('verify-otp error', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-router.get('/me', requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    res.json({ user: userPayload(user) });
-  } catch (err) {
-    logger.error('me error', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-router.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
-  const result = profileSchema.safeParse(req.body);
-  if (!result.success) {
-    res.status(400).json({ error: result.error.issues[0]?.message ?? 'Invalid request' });
-    return;
-  }
-
-  try {
-    const [currentUser] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
-    if (!currentUser) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    const updates: Partial<typeof users.$inferInsert> = {
+  const [updated] = await db
+    .update(users)
+    .set({
+      posterEmailVerified: true,
+      isPosterVerified: Boolean(user.phone),
       updatedAt: new Date(),
-    };
+    })
+    .where(eq(users.id, req.user!.userId))
+    .returning();
 
-    if (result.data.name !== undefined) {
-      updates.name = result.data.name;
-    }
+  res.json({ user: userPayload(updated) });
+}));
 
-    if (result.data.phone !== undefined) {
-      updates.phone = result.data.phone || null;
-      updates.isPosterVerified = currentUser.posterEmailVerified && Boolean(updates.phone);
-    }
+router.get('/me', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
+  const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+  if (!user) throw new NotFoundError('User not found');
+  res.json({ user: userPayload(user) });
+}));
 
-    const [updated] = await db
-      .update(users)
-      .set(updates)
-      .where(eq(users.id, req.user!.userId))
-      .returning();
+router.patch('/profile', requireAuth, asyncHandler(async (req: AuthRequest, res) => {
+  const result = profileSchema.safeParse(req.body);
+  if (!result.success) throw new ValidationError(result.error.issues[0]?.message ?? 'Invalid request');
 
-    res.json({ user: userPayload(updated) });
-  } catch (err) {
-    logger.error('profile update error', err);
-    res.status(500).json({ error: 'Internal server error' });
+  const [currentUser] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+  if (!currentUser) throw new NotFoundError('User not found');
+
+  const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+
+  if (result.data.name !== undefined) {
+    updates.name = result.data.name;
   }
-});
+
+  if (result.data.phone !== undefined) {
+    updates.phone = result.data.phone || null;
+    updates.isPosterVerified = currentUser.posterEmailVerified && Boolean(updates.phone);
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set(updates)
+    .where(eq(users.id, req.user!.userId))
+    .returning();
+
+  res.json({ user: userPayload(updated) });
+}));
 
 export default router;
