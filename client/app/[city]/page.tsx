@@ -138,7 +138,7 @@ export default async function CityPage({
         {listingCards.length > 0 ? (
           <div>
             <h2 className="font-display text-2xl mb-6">Latest Listings in {city.name}</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               {listingCards.map((l) => (
                 <SeoListingCard key={l.id} listing={l} city={city.name} pageType="seo_city" />
               ))}

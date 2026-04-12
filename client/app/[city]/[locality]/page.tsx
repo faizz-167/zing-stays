@@ -199,7 +199,7 @@ function ListingsSection({
   return (
     <div>
       <h2 className="font-display text-2xl mb-6">Latest Listings in {localityName}</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         {listings.map((l) => (
           <SeoListingCard
             key={l.id}

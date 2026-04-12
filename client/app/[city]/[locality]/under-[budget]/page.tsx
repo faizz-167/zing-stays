@@ -144,7 +144,7 @@ export default async function BudgetBandPage({
             <h2 className="font-display text-2xl mb-6">
               Affordable Listings in {locality.name}
             </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-6">
               {listingCards.map((l) => (
                 <SeoListingCard
                   key={l.id}

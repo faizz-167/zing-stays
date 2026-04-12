@@ -168,7 +168,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
         </div>
       </div>
 
-      <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+      <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <div className="relative aspect-[16/11] overflow-hidden rounded-xl bg-muted">
           {thumb ? (
             <Image
@@ -201,9 +201,13 @@ export default function ListingCard({ listing }: ListingCardProps) {
             <DetailTile label="Availability" value={availability ?? 'Ready to move'} />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DetailTile label="Gender" value={genderValue} />
-            {listing.foodIncluded && <DetailTile label="Meals" value="Food included" />}
+            {listing.foodIncluded ? (
+              <DetailTile label="Meals" value="Food included" />
+            ) : (
+              <DetailTile label="Meals" value="Not included" />
+            )}
           </div>
 
           {listing.badges.length > 0 && (

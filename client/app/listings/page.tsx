@@ -137,13 +137,13 @@ function ListingsContent() {
   const listings = data?.hits ?? [];
 
   return (
-    <div className="flex flex-col md:flex-row gap-12">
+    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
       <ListingFilters />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         {isPending && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="space-y-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="aspect-[4/3] bg-muted rounded-lg animate-pulse" />
+              <div key={i} className="h-[32rem] rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
         )}
@@ -160,7 +160,7 @@ function ListingsContent() {
             </p>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="space-y-6">
           {listings.map((listing: ListingCardData) => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
@@ -172,7 +172,7 @@ function ListingsContent() {
 
 export default function ListingsPage() {
   return (
-    <div className="max-w-content mx-auto px-6 py-12">
+    <div className="mx-auto max-w-[82rem] px-6 py-12">
       <div className="mb-10">
         <SectionLabel>Browse Rooms</SectionLabel>
         <h1 className="font-display text-4xl mb-6">Available Rooms</h1>
