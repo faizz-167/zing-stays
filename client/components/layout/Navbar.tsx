@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { Heart } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -23,8 +24,13 @@ export default function Navbar() {
               <Link href="/dashboard" className="font-sans text-sm font-medium tracking-[0.05em] text-muted-foreground hover:text-foreground transition-colors">
                 Dashboard
               </Link>
-              <Link href="/dashboard/favorites" className="font-sans text-sm font-medium tracking-[0.05em] text-muted-foreground hover:text-foreground transition-colors">
-                Saved
+              <Link
+                href="/dashboard/favorites"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Saved listings"
+              >
+                <Heart className="h-4 w-4" />
+                <span className="sr-only">Saved</span>
               </Link>
             </>
           )}

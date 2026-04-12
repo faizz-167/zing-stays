@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Heart } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { requireServerUser } from '@/lib/server-auth';
 
@@ -19,9 +20,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link
             key={href}
             href={href}
-            className="font-mono text-xs uppercase tracking-[0.1em] px-4 py-2 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.1em] px-4 py-2 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >
-            {label}
+            {href === '/dashboard/favorites' ? (
+              <>
+                <Heart className="h-4 w-4" />
+                <span className="sr-only">Saved</span>
+              </>
+            ) : (
+              label
+            )}
           </Link>
         ))}
       </div>

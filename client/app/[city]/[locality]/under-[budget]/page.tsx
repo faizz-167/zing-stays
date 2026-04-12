@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import SeoListingCard from '@/components/seo/SeoListingCard';
 import SeoPageTracker from '@/components/seo/SeoPageTracker';
+import ListingsTopBar from '@/components/search/ListingsTopBar';
 import type { ListingCardData } from '@/lib/types';
 
 export const revalidate = 3600;
@@ -109,6 +110,10 @@ export default async function BudgetBandPage({
         pageType="seo_budget_band"
       />
       <div className="max-w-content mx-auto px-6 py-12 space-y-12">
+        <ListingsTopBar
+          initialCity={{ id: city.id, name: city.name, slug: city.slug }}
+          initialLocalities={[{ id: locality.id, name: locality.name, slug: locality.slug, cityId: city.id }]}
+        />
         {/* Breadcrumb */}
         <nav className="font-mono text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <a href={`/${city.slug}`} className="hover:text-foreground transition-colors">

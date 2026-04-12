@@ -76,7 +76,7 @@ export default function PriceTrends({ localityId, apiBase = '/api' }: PriceTrend
   const dir = DIRECTION_CONFIG[data.direction];
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-gray-800">Price Trends</h3>
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${dir.color} ${dir.bg}`}>
@@ -84,8 +84,8 @@ export default function PriceTrends({ localityId, apiBase = '/api' }: PriceTrend
         </span>
       </div>
 
-      <div className="mt-4 h-44">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="mt-4 h-44 min-w-0 w-full">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <LineChart data={data.trend} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis

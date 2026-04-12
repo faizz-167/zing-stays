@@ -4,6 +4,7 @@ import LocalityLinks from '@/components/seo/LocalityLinks';
 import BudgetBandLinks from '@/components/seo/BudgetBandLinks';
 import SeoListingCard from '@/components/seo/SeoListingCard';
 import SeoPageTracker from '@/components/seo/SeoPageTracker';
+import ListingsTopBar from '@/components/search/ListingsTopBar';
 import type { ListingCardData } from '@/lib/types';
 
 export const revalidate = 3600;
@@ -110,6 +111,7 @@ export default async function CityPage({
       />
       <SeoPageTracker city={city.name} citySlug={city.slug} pageType="seo_city" />
       <div className="max-w-content mx-auto px-6 py-12 space-y-12">
+        <ListingsTopBar initialCity={{ id: city.id, name: city.name, slug: city.slug }} />
         {/* Header */}
         <div>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-wider mb-2">

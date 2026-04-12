@@ -6,6 +6,7 @@ import PropertyTypeLinks from '@/components/seo/PropertyTypeLinks';
 import BudgetBandLinks from '@/components/seo/BudgetBandLinks';
 import SeoListingCard from '@/components/seo/SeoListingCard';
 import SeoPageTracker from '@/components/seo/SeoPageTracker';
+import ListingsTopBar from '@/components/search/ListingsTopBar';
 import type { ListingCardData } from '@/lib/types';
 import RentEstimator from '@/components/utilities/RentEstimator';
 import PriceTrends from '@/components/utilities/PriceTrends';
@@ -292,6 +293,10 @@ export default async function LocalityPage({
         pageType="seo_locality"
       />
       <div className="max-w-content mx-auto px-6 py-12 space-y-12">
+        <ListingsTopBar
+          initialCity={{ id: city.id, name: city.name, slug: city.slug }}
+          initialLocalities={[{ id: locality.id, name: locality.name, slug: locality.slug, cityId: city.id }]}
+        />
         <nav className="font-mono text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <Link href={`/${city.slug}`} className="hover:text-foreground transition-colors">
             {city.name}

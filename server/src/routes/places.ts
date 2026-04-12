@@ -64,7 +64,9 @@ router.get('/places/nearby', async (req, res) => {
       .select({ id: localities.id, name: localities.name, slug: localities.slug })
       .from(localityNeighbors)
       .innerJoin(localities, eq(localityNeighbors.neighborId, localities.id))
-      .where(and(eq(localityNeighbors.localityId, localityId), eq(localities.isActive, true)));
+      .where(and(eq(localityNeighbors.localityId, localityId), eq(localities.isActive, true)))
+      .orderBy(asc(localities.name))
+      .limit(5);
 
     if (explicit.length > 0) {
       res.json({ nearby: explicit });
@@ -95,7 +97,7 @@ router.get('/places/nearby', async (req, res) => {
         ),
       )
       .orderBy(asc(localities.name))
-      .limit(10);
+      .limit(5);
 
     res.json({ nearby: fallback });
   } catch (err) {

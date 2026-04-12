@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import ListingFilters from '@/components/listings/ListingFilters';
 import ListingCard from '@/components/listings/ListingCard';
 import SectionLabel from '@/components/ui/SectionLabel';
+import ListingsTopBar from '@/components/search/ListingsTopBar';
 import type { ListingCardData } from '@/lib/types';
 import { useSearch, type SearchFilters } from '@/hooks/useSearch';
 
@@ -176,6 +177,7 @@ export default function ListingsPage() {
       <div className="mb-10">
         <SectionLabel>Browse Rooms</SectionLabel>
         <h1 className="font-display text-4xl mb-6">Available Rooms</h1>
+        <ListingsTopBar />
       </div>
       <Suspense fallback={<div className="animate-pulse h-96 bg-muted rounded-lg" />}>
         <ListingsContent />

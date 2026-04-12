@@ -141,7 +141,7 @@ router.get('/locality/:citySlug/:localitySlug', async (req, res) => {
       .where(and(eq(localities.cityId, city.id), sql`${localities.id} != ${locality.id}`))
       .groupBy(localities.id, localities.name, localities.slug)
       .orderBy(desc(count(listings.id)))
-      .limit(8);
+      .limit(5);
 
     const payload = {
       city,
