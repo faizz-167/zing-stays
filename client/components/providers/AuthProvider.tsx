@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AuthContext, AuthUser } from '@/lib/auth';
 import { authClient } from '@/lib/auth-client';
 
@@ -24,6 +24,11 @@ function mapUser(user: Record<string, unknown> | null | undefined): AuthUser | n
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data, isPending, refetch } = authClient.useSession();
   const user = mapUser((data?.user ?? null) as Record<string, unknown> | null);
+  // Prevent premature redirects: on the server and during hydration there are
+  // no cookies, so isPending may be false with no data. Only mark ready after
+  // the component has mounted on the client and the session fetch settles.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const login = useCallback((nextUser: AuthUser) => {
     void nextUser;
@@ -41,9 +46,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       login,
       logout,
       isAuthenticated: !!user,
-      isReady: !isPending,
+      isReady: mounted && !isPending,
     }),
-    [user, login, logout, isPending],
+    [user, login, logout, isPending, mounted],
   );
 
   return (
