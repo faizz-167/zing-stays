@@ -114,9 +114,10 @@ export default function BasicDetailsSection({
 
         <div>
           <label className="mb-2 block font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground">
-            Address (optional)
+            Address *
           </label>
           <Input placeholder="Street, building, area..." {...register('address')} />
+          {errors.address && <p className="mt-1 font-sans text-xs text-red-600">{errors.address.message}</p>}
         </div>
 
         <div>

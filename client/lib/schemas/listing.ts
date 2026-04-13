@@ -9,7 +9,7 @@ export const preferredTenantValues = ['students', 'working', 'family', 'any'] as
 
 const optionalTrimmedString = z.preprocess((value) => {
   if (typeof value !== 'string') {
-    return value;
+    return value === null ? undefined : value;
   }
 
   const trimmed = value.trim();
@@ -63,7 +63,7 @@ export const listingSchema = z.object({
   preferredTenants: z.enum(preferredTenantValues).default('any'),
   description: optionalTrimmedString.pipe(z.string().max(2000).optional()),
   landmark: optionalTrimmedString.pipe(z.string().max(200).optional()),
-  address: optionalTrimmedString,
+  address: z.string().trim().min(1, 'Address is required').max(500),
   foodIncluded: z.boolean().default(false),
   genderPref: z.enum(['male', 'female', 'any']).default('any'),
   amenities: z.array(z.string()).default([]),

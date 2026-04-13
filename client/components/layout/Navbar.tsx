@@ -60,13 +60,15 @@ export default function Navbar() {
             : 'bg-background/95 backdrop-blur border-b border-transparent',
         )}
       >
+        {/* Gold accent top bar */}
+        <div className="h-[2px] bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
         <nav className="max-w-content mx-auto px-6 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
           <Link
             href="/"
-            className="font-display text-xl font-semibold tracking-tight text-foreground hover:text-accent transition-colors duration-200 flex-shrink-0"
+            className="font-display text-xl font-semibold tracking-tight text-foreground hover:text-accent transition-colors duration-200 flex-shrink-0 group"
           >
-            ZingBrokers
+            Zing<span className="text-accent group-hover:text-accent-secondary transition-colors duration-200">Brokers</span>
           </Link>
 
 

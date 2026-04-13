@@ -12,14 +12,17 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        'bg-card border border-border rounded-lg transition-all duration-300 ease-out',
+        'bg-card border border-border rounded-xl transition-all duration-300 ease-out relative overflow-hidden',
         accentTop && 'border-t-2 border-t-accent',
         elevated ? 'shadow-md' : 'shadow-sm',
-        hoverEffect && 'hover:shadow-hover hover:border-border/80 hover:-translate-y-1 hover:bg-muted/30 cursor-pointer',
+        hoverEffect && 'hover:shadow-hover hover:border-accent/20 hover:-translate-y-1.5 cursor-pointer group',
         className,
       )}
       {...props}
     >
+      {hoverEffect && (
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      )}
       {children}
     </div>
   ),

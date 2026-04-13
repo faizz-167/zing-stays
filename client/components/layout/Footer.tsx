@@ -18,7 +18,9 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border mt-24 bg-muted/30">
+    <footer className="border-t border-border mt-24 bg-gradient-to-b from-muted/40 to-muted/20 relative">
+      {/* Top gold accent */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
       <div className="max-w-content mx-auto px-6 py-16">
         {/* Top Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
@@ -26,9 +28,9 @@ export default function Footer() {
           <div className="md:col-span-2">
             <Link
               href="/"
-              className="font-display text-2xl font-semibold text-foreground hover:text-accent transition-colors duration-200"
+              className="font-display text-2xl font-semibold text-foreground hover:text-accent transition-colors duration-200 group"
             >
-              ZingBrokers
+              Zing<span className="text-accent group-hover:text-accent-secondary transition-colors duration-200">Brokers</span>
             </Link>
             <p className="font-sans text-sm text-muted-foreground mt-3 max-w-xs leading-relaxed">
               India&apos;s student and bachelor-focused rental marketplace. Verified listings,
@@ -84,13 +86,17 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.1em]">
+        <div className="mt-12 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
             © {currentYear} ZingBrokers. All rights reserved.
           </p>
-          <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.1em]">
-            Affordable rooms for students &amp; bachelors
-          </p>
+          <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+            <span>Affordable rooms</span>
+            <span className="text-accent/40">◆</span>
+            <span>Students &amp; Bachelors</span>
+            <span className="text-accent/40">◆</span>
+            <span>India</span>
+          </div>
         </div>
       </div>
     </footer>

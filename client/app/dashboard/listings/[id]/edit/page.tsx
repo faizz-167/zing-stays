@@ -11,7 +11,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
 
   const { data, isPending } = useQuery({
     queryKey: ['listing', id],
-    queryFn: () => api.get<Partial<ListingInput>>(`/listings/${id}`),
+    queryFn: () => api.get<Partial<ListingInput> & { status?: string }>(`/listings/${id}`),
   });
 
   if (isPending) return <div className="animate-pulse h-96 bg-muted rounded-lg" />;
@@ -20,7 +20,7 @@ export default function EditListingPage({ params }: { params: Promise<{ id: stri
     <div>
       <SectionLabel>Edit Room</SectionLabel>
       <h1 className="font-display text-3xl mb-10">Update Listing</h1>
-      <ListingForm initialData={data} listingId={parseInt(id)} />
+      <ListingForm initialData={data} listingId={parseInt(id)} isPublished={data?.status === 'active'} />
     </div>
   );
 }

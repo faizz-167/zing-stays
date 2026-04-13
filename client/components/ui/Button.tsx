@@ -23,7 +23,7 @@ export function buttonClassName({
       'min-h-[52px] px-8 py-4 text-lg': size === 'lg',
     },
     {
-      'bg-accent text-accent-foreground shadow-sm hover:bg-accent-secondary hover:shadow-hover hover:-translate-y-[1px] active:scale-[0.98] active:translate-y-0': variant === 'primary',
+      'bg-accent text-accent-foreground shadow-sm hover:bg-accent-secondary hover:shadow-hover hover:-translate-y-[1px] active:scale-[0.98] active:translate-y-0 overflow-hidden relative group/btn': variant === 'primary',
       'bg-transparent border-2 border-foreground text-foreground hover:bg-muted hover:border-accent hover:text-accent hover:-translate-y-[1px] active:scale-[0.98]': variant === 'secondary',
       'bg-transparent text-muted-foreground hover:text-foreground hover:underline underline-offset-4 decoration-accent active:scale-[0.98]': variant === 'ghost',
     },
@@ -39,7 +39,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={buttonClassName({ variant, size, className })}
         {...props}
       >
-        {children}
+        {variant === 'primary' && (
+          <span
+            className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none"
+            aria-hidden="true"
+          />
+        )}
+        <span className="relative z-10 inline-flex items-center justify-center">{children}</span>
       </button>
     );
   },

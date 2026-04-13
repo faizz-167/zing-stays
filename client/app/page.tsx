@@ -58,7 +58,7 @@ export default async function HomePage() {
   return (
     <>
       {/* ─── Hero ─── */}
-      <section className="relative min-h-[88vh] flex flex-col justify-center">
+      <section className="relative min-h-[88vh] flex flex-col justify-center overflow-hidden">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src={heroImage}
@@ -69,23 +69,53 @@ export default async function HomePage() {
             quality={90}
             placeholder="blur"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/70 to-background/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/92 via-background/72 to-background/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/20" />
+          {/* Diagonal geometric overlay */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                -55deg,
+                transparent,
+                transparent 60px,
+                rgba(184,134,11,0.028) 60px,
+                rgba(184,134,11,0.028) 61px
+              )`,
+            }}
+          />
         </div>
+
+        {/* Floating decorative orb */}
+        <div
+          className="absolute right-[8%] top-[20%] w-64 h-64 rounded-full pointer-events-none hidden lg:block"
+          style={{
+            background: 'radial-gradient(circle, rgba(184,134,11,0.07) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
 
         <div className="relative z-10 max-w-content mx-auto px-6 py-16 md:py-24 w-full">
           {/* Headline area */}
           <div className="text-center mb-10">
-            <FadeIn delay={0.1} className="mb-4">
-              <span className="inline-flex items-center gap-2 font-mono text-xs font-medium uppercase tracking-[0.15em] text-accent bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20">
+            <FadeIn delay={0.1} className="mb-5">
+              <span className="inline-flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-accent bg-accent/10 px-4 py-2 rounded-full border border-accent/25">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                 Student &amp; Bachelor Housing
+                <span className="text-accent/40">◆</span>
+                India
               </span>
             </FadeIn>
 
             <FadeIn delay={0.2}>
-              <h1 className="font-display text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] font-semibold leading-[1.05] tracking-[-0.02em] text-foreground mb-4">
-                Find Your Perfect <span className="text-accent">Room</span>
+              <h1 className="font-display text-[2.6rem] md:text-[3.8rem] lg:text-[4.4rem] font-bold leading-[1.03] tracking-[-0.025em] text-foreground mb-5">
+                Find Your Perfect{' '}
+                <span
+                  className="text-accent relative inline-block"
+                  style={{ textShadow: '0 0 60px rgba(184,134,11,0.15)' }}
+                >
+                  Room
+                </span>
               </h1>
             </FadeIn>
 
@@ -104,44 +134,49 @@ export default async function HomePage() {
           </FadeIn>
 
           {/* Popular cities — below search */}
-          <FadeIn delay={0.5} className="flex items-center justify-center gap-5 flex-wrap mt-6">
-            <span className="font-mono text-xs text-muted-foreground uppercase tracking-[0.1em]">
+          <FadeIn delay={0.5} className="flex items-center justify-center gap-2 flex-wrap mt-7">
+            <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em] mr-1">
               Popular:
             </span>
-            {POPULAR_CITIES.map(({ name, slug }) => (
-              <Link
-                key={slug}
-                href={`/${slug}`}
-                className="font-sans text-sm text-muted-foreground hover:text-accent transition-colors underline-offset-4 hover:underline decoration-accent"
-              >
-                {name}
-              </Link>
+            {POPULAR_CITIES.map(({ name, slug }, i) => (
+              <span key={slug} className="flex items-center gap-2">
+                {i > 0 && <span className="text-border text-xs">·</span>}
+                <Link
+                  href={`/${slug}`}
+                  className="font-sans text-sm text-muted-foreground hover:text-accent transition-colors duration-200"
+                >
+                  {name}
+                </Link>
+              </span>
             ))}
           </FadeIn>
         </div>
       </section>
 
       {/* ─── Stats Bar ─── */}
-      <section className="border-y border-border bg-muted/30">
-        <div className="max-w-content mx-auto px-6 py-6">
-          <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="border-y border-border bg-gradient-to-r from-muted/20 via-muted/40 to-muted/20 relative overflow-hidden">
+        {/* Subtle horizontal line accent */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <div className="max-w-content mx-auto px-6 py-7">
+          <StaggerContainer className="flex flex-col sm:flex-row items-center justify-center divide-y sm:divide-y-0 sm:divide-x divide-border/60">
             {[
               { value: '10K+', label: 'Verified Listings' },
               { value: '50+', label: 'Cities Covered' },
               { value: '25K+', label: 'Happy Tenants' },
               { value: '4.8★', label: 'Average Rating' },
             ].map(({ value, label }) => (
-              <StaggerItem key={label} className="text-center relative">
-                <div className="font-display text-2xl md:text-3xl text-foreground tracking-tight">
+              <StaggerItem key={label} className="text-center px-8 py-3 sm:py-0 relative group">
+                <div className="font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight group-hover:text-accent transition-colors duration-300">
                   {value}
                 </div>
-                <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em] mt-0.5">
+                <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.18em] mt-1">
                   {label}
                 </div>
               </StaggerItem>
             ))}
           </StaggerContainer>
         </div>
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
       </section>
 
       {/* ─── Featured Properties ─── */}
@@ -183,28 +218,48 @@ export default async function HomePage() {
       </section>
 
       {/* ─── How It Works ─── */}
-      <section className="py-16 md:py-24 px-6 border-t border-border">
-        <StaggerContainer className="max-w-content mx-auto">
+      <section className="py-16 md:py-24 px-6 border-t border-border relative overflow-hidden">
+        {/* Decorative background text */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+          aria-hidden="true"
+        >
+          <span
+            className="font-display text-[20rem] font-bold leading-none tracking-tighter text-foreground/[0.015]"
+          >
+            How
+          </span>
+        </div>
+        <StaggerContainer className="max-w-content mx-auto relative z-10">
           <StaggerItem>
             <SectionLabel>How It Works</SectionLabel>
             <h2 className="font-display text-3xl md:text-4xl text-center mb-12">
               Simple. Fast. Transparent.
             </h2>
           </StaggerItem>
-          <div className="grid md:grid-cols-3 gap-8 md:gap-10">
+          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
             {HOW_IT_WORKS.map(({ step, title, desc, icon: Icon }) => (
               <StaggerItem key={step}>
-                <div className="flex flex-col items-start">
-                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
-                    <Icon className="h-5 w-5 text-accent" />
+                <div className="flex flex-col items-start relative group">
+                  {/* Giant ghost step number */}
+                  <div
+                    className="absolute -top-4 -left-2 font-display text-8xl font-bold leading-none text-foreground/[0.04] select-none pointer-events-none transition-all duration-500 group-hover:text-accent/[0.06]"
+                    aria-hidden="true"
+                  >
+                    {step}
                   </div>
-                  <span className="font-mono text-xs text-accent uppercase tracking-[0.15em] mb-1.5">
-                    Step {step}
-                  </span>
-                  <h3 className="font-display text-xl mb-2">{title}</h3>
-                  <p className="font-sans text-muted-foreground leading-relaxed text-sm">
-                    {desc}
-                  </p>
+                  <div className="relative z-10">
+                    <div className="w-11 h-11 rounded-lg bg-accent/10 border border-accent/15 flex items-center justify-center mb-5 group-hover:bg-accent/15 group-hover:border-accent/25 transition-all duration-300">
+                      <Icon className="h-4.5 w-4.5 text-accent" />
+                    </div>
+                    <span className="font-mono text-[10px] text-accent uppercase tracking-[0.18em] mb-2 block">
+                      Step {step}
+                    </span>
+                    <h3 className="font-display text-xl mb-2.5">{title}</h3>
+                    <p className="font-sans text-muted-foreground leading-relaxed text-sm">
+                      {desc}
+                    </p>
+                  </div>
                 </div>
               </StaggerItem>
             ))}
@@ -214,24 +269,50 @@ export default async function HomePage() {
 
       {/* ─── CTA ─── */}
       <section className="relative py-16 md:py-24 px-6 border-t border-border overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[500px] h-[500px] rounded-full bg-accent opacity-[0.04] blur-3xl" />
+        {/* Layered glow orbs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full"
+            style={{ background: 'radial-gradient(ellipse, rgba(184,134,11,0.06) 0%, transparent 70%)', filter: 'blur(60px)' }}
+          />
+          <div
+            className="absolute left-[20%] top-[30%] w-[200px] h-[200px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(184,134,11,0.04) 0%, transparent 70%)', filter: 'blur(40px)' }}
+          />
         </div>
+        {/* Diagonal grid lines */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 80px,
+              rgba(184,134,11,0.018) 80px,
+              rgba(184,134,11,0.018) 81px
+            )`,
+          }}
+        />
         <FadeIn className="max-w-content mx-auto text-center relative z-10">
           <SectionLabel>For Property Owners</SectionLabel>
-          <h2 className="font-display text-3xl md:text-4xl mb-5">
+          <h2 className="font-display text-3xl md:text-[2.8rem] font-bold mb-5 leading-tight">
             List Your Room in Minutes
           </h2>
-          <p className="font-sans text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
+          <p className="font-sans text-base md:text-lg text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
             Post your PG, hostel, or room for free. Reach thousands of students
             looking for their next home.
           </p>
-          <Link
-            href="/dashboard/listings/new"
-            className={buttonClassName({ size: 'lg' })}
-          >
-            Post a Room — It&apos;s Free
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/dashboard/listings/new"
+              className={buttonClassName({ size: 'lg' })}
+            >
+              Post a Room — It&apos;s Free
+            </Link>
+            <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
+              No credit card required
+            </span>
+          </div>
         </FadeIn>
       </section>
     </>

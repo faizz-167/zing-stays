@@ -37,9 +37,10 @@ const APARTMENT_ROOM_TYPES = bhkRoomTypes.map((value) => ({
 interface ListingFormProps {
   initialData?: Partial<ListingInput>;
   listingId?: number;
+  isPublished?: boolean;
 }
 
-export default function ListingForm({ initialData, listingId: listingIdProp }: ListingFormProps) {
+export default function ListingForm({ initialData, listingId: listingIdProp, isPublished }: ListingFormProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -238,7 +239,7 @@ export default function ListingForm({ initialData, listingId: listingIdProp }: L
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving...' : listingIdProp ? 'Save Changes' : 'Save Draft'}
           </Button>
-          {(savedDraftId || listingIdProp) && (
+          {(savedDraftId || (listingIdProp && !isPublished)) && (
             <Button
               type="button"
               variant="secondary"

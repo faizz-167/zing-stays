@@ -348,6 +348,7 @@ export async function updateListingStatus(id: number, body: unknown, req: AuthRe
     .where(eq(listings.id, id))
     .returning();
 
+  enqueueSearchIndex(id, result.data.status === 'active' ? 'upsert' : 'delete');
   await invalidateListingCaches(id);
   return { id: updated.id, status: updated.status };
 }
