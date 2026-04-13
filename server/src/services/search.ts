@@ -32,7 +32,7 @@ export async function setupSearchIndex(): Promise<void> {
     ],
   });
   // Wait for settings to be applied before indexing documents.
-  await searchClient.waitForTask(task.taskUid, { timeOutMs: 30_000 });
+  await searchClient.tasks.waitForTask(task.taskUid, { timeout: 30_000 });
 }
 
 export interface SearchDoc {
