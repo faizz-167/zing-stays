@@ -274,7 +274,7 @@ export default function GuidedSearchWidget() {
           </button>
 
           {showCityDropdown && (
-            <div className="absolute top-full left-0 mt-2 w-[220px] bg-card border border-border rounded-xl shadow-xl py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+            <div className="absolute top-full left-0 mt-2 w-[220px] bg-card border border-border rounded-xl shadow-xl py-2 z-[200] animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="px-3 pb-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
                 Popular Cities
               </div>
@@ -322,7 +322,7 @@ export default function GuidedSearchWidget() {
 
           {/* Smart Suggestions Dropdown */}
           {showLocalityDropdown && (
-            <div className="absolute top-[102%] left-0 sm:-left-[160px] right-0 sm:right-auto sm:w-[480px] bg-card border border-border rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200 h-auto max-h-[380px] overflow-hidden flex flex-col">
+            <div className="absolute top-[102%] left-0 sm:-left-[160px] right-0 sm:right-auto sm:w-[480px] bg-card border border-border rounded-xl shadow-xl py-2 z-[200] animate-in fade-in slide-in-from-top-2 duration-200 h-auto max-h-[380px] overflow-hidden flex flex-col">
               
               {!selectedCity ? (
                 <div className="p-4 text-sm text-muted-foreground text-center">
@@ -449,7 +449,7 @@ export default function GuidedSearchWidget() {
 
              {/* Filters Popover */}
              {showFilters && (
-               <div className="absolute top-[102%] right-0 sm:right-auto sm:-left-[100px] w-[320px] bg-card border border-border shadow-[0_12px_40px_rgba(0,0,0,0.12)] rounded-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+               <div className="absolute top-[102%] right-0 sm:right-auto sm:-left-[100px] w-[320px] bg-card border border-border shadow-[0_12px_40px_rgba(0,0,0,0.12)] rounded-xl z-[200] animate-in fade-in zoom-in-95 duration-200">
                   <div className="flex items-center justify-between p-4 border-b border-border/50">
                     <h3 className="font-semibold text-foreground">Filters</h3>
                     <button type="button" onClick={() => setShowFilters(false)} className="text-muted-foreground hover:text-foreground">

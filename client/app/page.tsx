@@ -127,7 +127,7 @@ export default async function HomePage() {
           </div>
 
           {/* Search Card — centered, elevated */}
-          <FadeIn delay={0.4}>
+          <FadeIn delay={0.4} className="relative z-20">
             <div className="flex justify-center">
               <GuidedSearchWidget />
             </div>
