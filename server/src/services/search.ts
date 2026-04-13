@@ -12,7 +12,7 @@ export const searchClient = new Meilisearch({
 export const listingsIndex = searchClient.index('listings');
 
 export async function setupSearchIndex(): Promise<void> {
-  await listingsIndex.updateSettings({
+  const task = await listingsIndex.updateSettings({
     searchableAttributes: ['title', 'landmark', 'locality', 'city', 'description', 'amenities'],
     filterableAttributes: [
       'city', 'locality', 'city_id', 'locality_id', 'intent',
@@ -31,6 +31,8 @@ export async function setupSearchIndex(): Promise<void> {
       'created_at:desc',
     ],
   });
+  // Wait for settings to be applied before indexing documents.
+  await searchClient.waitForTask(task.taskUid, { timeOutMs: 30_000 });
 }
 
 export interface SearchDoc {
