@@ -65,6 +65,8 @@ export default function GuidedSearchWidget() {
   
   // Loading UX
   const [isSearching, setIsSearching] = useState(false);
+  const [citiesError, setCitiesError] = useState(false);
+  const [localitiesError, setLocalitiesError] = useState(false);
 
   // Refs for click-outside handles
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,19 +87,20 @@ export default function GuidedSearchWidget() {
           setSelectedCity(defaultCity);
         }
       })
-      .catch(() => {});
+      .catch(() => { setCitiesError(true); });
   }, []);
 
   // Fetch localities for selected city
   useEffect(() => {
     if (!selectedCity) return;
     let cancelled = false;
+    setLocalitiesError(false);
     api
       .get<{ data: Locality[] }>(`/localities?cityId=${selectedCity.id}`)
       .then((d) => {
         if (!cancelled) setCityLocalities(d.data ?? []);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setLocalitiesError(true); });
     return () => { cancelled = true; };
   }, [selectedCity]);
 
@@ -113,7 +116,7 @@ export default function GuidedSearchWidget() {
       .then((d) => {
         if (!cancelled) setNearbyLocalities(d.nearby ?? []);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setNearbyLocalities([]); });
     return () => { cancelled = true; };
   }, [selectedLocalities]);
 
@@ -225,7 +228,7 @@ export default function GuidedSearchWidget() {
   const filterCount = selectedRoomTypes.length + (selectedPropertyType ? 1 : 0);
 
   return (
-    <div className="w-full max-w-[800px] mx-auto z-20 relative">
+    <div className="w-full max-w-[800px] mx-auto z-50 relative">
       {/* ─── Intent Tabs (Premium Airbnb Style) ─── */}
       <div className="flex justify-center mb-0 sm:justify-start sm:ml-4">
         <div className="flex bg-card/90 backdrop-blur-sm rounded-t-xl px-2 pt-2 border-x border-t border-border/80 shadow-md">
@@ -252,7 +255,7 @@ export default function GuidedSearchWidget() {
       </div>
 
       {/* ─── Unified Composite Search Bar ─── */}
-      <div className="flex flex-col sm:flex-row items-stretch bg-card shadow-lg shadow-black/5 rounded-xl sm:rounded-tl-none rounded-tl-xl sm:rounded-tr-xl border border-border/80 relative z-20">
+      <div className="flex flex-col sm:flex-row items-stretch bg-card shadow-lg shadow-black/5 rounded-xl sm:rounded-tl-none rounded-tl-xl sm:rounded-tr-xl border border-border/80 relative z-50">
         
         {/* 1. City selector */}
         <div ref={cityDropdownRef} className="relative sm:w-[160px] flex-shrink-0 border-b sm:border-b-0 sm:border-r border-border/50">
@@ -275,7 +278,9 @@ export default function GuidedSearchWidget() {
               <div className="px-3 pb-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
                 Popular Cities
               </div>
-              {cities.map(city => (
+              {citiesError ? (
+                <div className="px-4 py-3 text-sm text-destructive text-center">Failed to load cities. Please try again.</div>
+              ) : cities.map(city => (
                 <button
                   key={city.id}
                   type="button"
@@ -322,6 +327,10 @@ export default function GuidedSearchWidget() {
               {!selectedCity ? (
                 <div className="p-4 text-sm text-muted-foreground text-center">
                   Please select a city first.
+                </div>
+              ) : localitiesError ? (
+                <div className="p-4 text-sm text-destructive text-center">
+                  Failed to load localities. Please try again.
                 </div>
               ) : localityInput ? (
                 // Autocomplete Results

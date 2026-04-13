@@ -58,7 +58,7 @@ export default async function HomePage() {
   return (
     <>
       {/* ─── Hero ─── */}
-      <section className="relative min-h-[88vh] flex flex-col justify-center overflow-hidden">
+      <section className="relative z-30 min-h-[88vh] flex flex-col justify-center">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src={heroImage}
