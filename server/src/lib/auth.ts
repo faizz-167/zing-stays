@@ -57,6 +57,10 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === 'production',
     trustedProxyHeaders: true,
+    defaultCookieAttributes: {
+      sameSite: 'none',
+      secure: true,
+    },
     database: {
       generateId: 'serial',
     },
