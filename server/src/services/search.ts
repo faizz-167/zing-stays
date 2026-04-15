@@ -13,7 +13,15 @@ export const listingsIndex = searchClient.index('listings');
 
 function isIndexNotFoundError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
-  return 'code' in err && err.code === 'index_not_found';
+  if ('code' in err && err.code === 'index_not_found') {
+    return true;
+  }
+
+  if ('cause' in err && err.cause && typeof err.cause === 'object' && 'code' in err.cause) {
+    return err.cause.code === 'index_not_found';
+  }
+
+  return false;
 }
 
 async function ensureListingsIndexExists(): Promise<void> {
