@@ -7,7 +7,6 @@ import { MapPin, Users, Calendar, ChefHat, Clock, HelpCircle, Share2 } from 'luc
 import type { ListingCardData } from '@/lib/types';
 import Card from '@/components/ui/Card';
 import TrustBadge from '@/components/ui/TrustBadge';
-import ContactButton from './ContactButton';
 import FavoriteButton from './FavoriteButton';
 
 const TRUST_BADGES = ['verified_owner', 'well_detailed', 'recently_updated'] as const;
@@ -183,25 +182,13 @@ export default function ListingCard({ listing, variant = 'full' }: ListingCardPr
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 mt-auto" onClick={stopCardClick}>
-            <div className="flex-1">
-              <ContactButton
-                listingId={listing.id}
-                ownerId={listing.ownerId}
-                city={listing.city}
-                locality={listing.locality}
-                propertyType={listing.propertyType}
-                className="w-full justify-center bg-accent hover:bg-accent-secondary text-accent-foreground font-medium py-2 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-xs"
-              />
-            </div>
-            <div className="flex-shrink-0">
-              <FavoriteButton
-                listingId={listing.id}
-                city={listing.city}
-                locality={listing.locality}
-                compact
-              />
-            </div>
+          <div className="flex items-center justify-end mt-auto" onClick={stopCardClick}>
+            <FavoriteButton
+              listingId={listing.id}
+              city={listing.city}
+              locality={listing.locality}
+              compact
+            />
           </div>
         </div>
       </Card>
@@ -325,16 +312,6 @@ export default function ListingCard({ listing, variant = 'full' }: ListingCardPr
             )}
 
             <div className="flex items-center gap-2 w-full" onClick={stopCardClick}>
-              <div className="flex-1">
-                <ContactButton
-                  listingId={listing.id}
-                  ownerId={listing.ownerId}
-                  city={listing.city}
-                  locality={listing.locality}
-                  propertyType={listing.propertyType}
-                  className="w-full justify-center bg-accent hover:bg-accent-secondary text-accent-foreground font-medium py-2.5 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-sm"
-                />
-              </div>
               <button
                 type="button"
                 onClick={handleShare}
