@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { AdminListing } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import SectionLabel from '@/components/ui/SectionLabel';
 
@@ -13,6 +13,7 @@ export default function AdminPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const isAdmin = !!user?.isAdmin;
+  const [reindexMessage, setReindexMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isReady) return;
@@ -37,6 +38,19 @@ export default function AdminPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-listings'] }),
   });
 
+  const reindexMutation = useMutation({
+    mutationFn: () => api.post<{ ok: true }>('/admin/search/reindex', {}),
+    onMutate: () => {
+      setReindexMessage(null);
+    },
+    onSuccess: () => {
+      setReindexMessage('Search index rebuilt successfully.');
+    },
+    onError: (error: Error) => {
+      setReindexMessage(error.message || 'Reindex failed.');
+    },
+  });
+
   if (!isReady || !isAuthenticated || !isAdmin) {
     return null;
   }
@@ -44,7 +58,30 @@ export default function AdminPage() {
   return (
     <div className="max-w-content mx-auto px-6 py-12">
       <SectionLabel>Admin</SectionLabel>
-      <h1 className="font-display text-3xl mb-10">Listing Management</h1>
+      <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="font-display text-3xl">Listing Management</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Rebuild the search index manually after a restart when needed.
+          </p>
+          {reindexMessage && (
+            <p
+              className={`mt-2 text-sm ${
+                reindexMutation.isError ? 'text-red-600' : 'text-emerald-700'
+              }`}
+            >
+              {reindexMessage}
+            </p>
+          )}
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => reindexMutation.mutate()}
+          disabled={reindexMutation.isPending}
+        >
+          {reindexMutation.isPending ? 'Reindexing...' : 'Reindex Search'}
+        </Button>
+      </div>
       {isPending ? (
         <div className="animate-pulse h-96 bg-muted rounded-lg" />
       ) : (

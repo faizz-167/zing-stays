@@ -6,6 +6,7 @@ import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { usePostHog } from 'posthog-js/react';
 import { reviewSchema, type ReviewFormValues } from '@/lib/schemas/review';
+import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
 
 interface ReviewFormProps {
@@ -56,9 +57,11 @@ export default function ReviewForm({
   onSubmitted,
 }: ReviewFormProps) {
   const posthog = usePostHog();
+  const { user: authUser, isReady } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [submittedDelayed, setSubmittedDelayed] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const currentUser = authUser ? { id: authUser.id } : user;
 
   const {
     control,
@@ -112,7 +115,15 @@ export default function ReviewForm({
     }
   };
 
-  if (!user) {
+  if (!isReady && !currentUser) {
+    return (
+      <div className="rounded-xl border border-border bg-muted p-4">
+        <p className="text-sm text-muted-foreground">Checking sign-in status…</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
     return (
       <div className="rounded-xl border border-border bg-muted p-4">
         <p className="text-sm text-muted-foreground">
@@ -125,7 +136,7 @@ export default function ReviewForm({
     );
   }
 
-  if (user.id === listingOwnerId) {
+  if (currentUser.id === listingOwnerId) {
     return (
       <div className="rounded-xl border border-border bg-muted p-4">
         <p className="text-sm text-muted-foreground">Owners cannot review their own listing.</p>
